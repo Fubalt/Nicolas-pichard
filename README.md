@@ -1,4 +1,6 @@
-# Nicolas Pichard
+# Nicolas Pichard 🎬
+
+> 🎮 **Jouer en direct : [https://nicolas-pichard.vercel.app](https://nicolas-pichard.vercel.app)**
 
 Une application web interactive de devinette inspirée de **Heardle** et **Framed**, dédiée aux vidéos cultes du créateur **Cyprien**.
 
