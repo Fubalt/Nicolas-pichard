@@ -13,7 +13,7 @@ import { ActionControls } from '@/components/ActionControls';
 import { EndGameCard } from '@/components/EndGameCard';
 import { Header } from '@/components/Header';
 import { RulesModal } from '@/components/RulesModal';
-import { AlertCircle, Music, Volume2, Sparkles, Trophy } from 'lucide-react';
+import { Music, Volume2, Sparkles, Trophy } from 'lucide-react';
 
 export default function Home() {
   const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(null);
@@ -26,7 +26,6 @@ export default function Home() {
   const [snippetElapsed, setSnippetElapsed] = useState<number>(0);
   const [playerReady, setPlayerReady] = useState<boolean>(false);
   const [isRulesOpen, setIsRulesOpen] = useState<boolean>(false);
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [volume, setVolume] = useState<number>(80);
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
@@ -47,7 +46,6 @@ export default function Home() {
     setIsPlaying(false);
     setSnippetProgress(0);
     setSnippetElapsed(0);
-    setFeedbackMessage(null);
   }, []);
 
   const handleVolumeChange = (newVol: number) => {
@@ -121,12 +119,8 @@ export default function Home() {
     if (currentAttempt + 1 >= 4) {
       // Defeat
       setGameStatus('lost');
-      setFeedbackMessage('Dommage ! Découvre la vidéo ci-dessous.');
     } else {
       setCurrentAttempt((prev) => prev + 1);
-      const nextDuration = ATTEMPT_DURATIONS[currentAttempt + 1];
-      setFeedbackMessage(`Palier suivant débloqué : ${nextDuration}s`);
-      setTimeout(() => setFeedbackMessage(null), 3000);
     }
   };
 
@@ -161,7 +155,6 @@ export default function Home() {
       ];
       setGuesses(newGuesses);
       setGameStatus('won');
-      setFeedbackMessage('🎉 Bravo ! C\'est la bonne vidéo !');
     } else {
       // Incorrect
       const newGuesses: GuessResult[] = [
@@ -178,12 +171,8 @@ export default function Home() {
       if (currentAttempt + 1 >= 4) {
         // Lost after 4 attempts
         setGameStatus('lost');
-        setFeedbackMessage('Toutes tes chances sont épuisées !');
       } else {
         setCurrentAttempt((prev) => prev + 1);
-        const nextDuration = ATTEMPT_DURATIONS[currentAttempt + 1];
-        setFeedbackMessage(`Mauvaise réponse ! Palier ${nextDuration}s débloqué.`);
-        setTimeout(() => setFeedbackMessage(null), 3000);
       }
     }
   };
@@ -197,28 +186,6 @@ export default function Home() {
       />
 
       <main className="flex-1 max-w-xl w-full mx-auto px-4 py-6 flex flex-col gap-5">
-        {/* Temporary Feedback Toast / Notification */}
-        {feedbackMessage && (
-          <div
-            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium border flex items-center justify-between shadow-lg transition-all animate-in fade-in slide-in-from-top-2 ${
-              gameStatus === 'won'
-                ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-200'
-                : 'bg-orange-950/80 border-orange-500/50 text-orange-200'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{feedbackMessage}</span>
-            </div>
-            <button
-              onClick={() => setFeedbackMessage(null)}
-              className="text-zinc-400 hover:text-zinc-200 text-xs font-mono ml-2"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
         {/* Video Player (Visible 16:9 snippet player with freeze frame) */}
         {currentVideo && (
           <YouTubePlayer
