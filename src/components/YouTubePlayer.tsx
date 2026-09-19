@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { GameStatus } from '@/types/game';
 import { ATTEMPT_DURATIONS } from '@/constants/game';
-import { Volume2, VolumeX, Eye, AlertTriangle } from 'lucide-react';
+import { Volume2, VolumeX, Eye, AlertTriangle, ShieldAlert, Lock } from 'lucide-react';
 
 export interface YouTubePlayerRef {
   playSnippet: () => void;
@@ -79,7 +79,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
     } catch (e) {}
   }, []);
 
-  // Stop playback and freeze on current frame
+  // Stop playback and freeze on current frame (no rewind)
   const stopPlayback = useCallback((resetToStart = false) => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
@@ -261,6 +261,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
     try {
       playerRef.current = new window.YT.Player(containerRef.current, {
         videoId,
+        host: 'https://www.youtube-nocookie.com',
         width: '100%',
         height: '100%',
         playerVars: {
@@ -318,44 +319,70 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
   };
 
   return (
-    <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-zinc-800 shadow-2xl transition-all">
+    <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-zinc-800 shadow-2xl transition-all select-none">
       {/* 
-        Anti-cheat / Title-masking & More-videos cropping wrapper:
-        During gameplay, scale 1.34 and slight negative vertical translation clips both:
-        - The top ~68px (title, channel avatar, watch later, share)
-        - The bottom ~52px ("More videos" / "Plus de vidéos" suggestion drawer, watermark)
-        pointer-events-none prevents hovering and native UI interactions.
-        When game is won/lost, transitions to scale-100 and pointer-events-auto.
+        YouTube IFrame Player:
+        NO ZOOM! The video plays at 100% natural resolution and scale (scale-100).
+        During gameplay, pointer-events are disabled so hovering never triggers YouTube UI overlays.
+        When game is won/lost, pointer-events are enabled and native controls unlock.
       */}
       <div
-        className={`w-full h-full relative overflow-hidden transition-all duration-500 ease-out ${
-          isGameOver
-            ? 'scale-100 translate-y-0 pointer-events-auto'
-            : 'scale-[1.34] -translate-y-[2%] pointer-events-none select-none'
+        className={`w-full h-full relative ${
+          isGameOver ? 'pointer-events-auto' : 'pointer-events-none'
         }`}
       >
         <div ref={containerRef} className="w-full h-full" />
       </div>
 
-      {/* Gameplay Status Badges */}
+      {/* 
+        Clean Top HUD Bar (Replaces YouTube's top title bar without zooming the video):
+        This bar covers the top ~48px where YouTube displays the title/avatar,
+        providing an elegant in-game HUD instead of an artificial video crop.
+      */}
       {!isGameOver && (
-        <>
-          <div className="absolute top-3 left-3 pointer-events-none z-20 flex items-center gap-2">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-white/10 text-[11px] font-semibold text-zinc-200 shadow-md">
-              <span className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-red-500 animate-pulse' : 'bg-orange-400'}`} />
-              <span>{isPlaying ? 'Lecture...' : 'Image figée'}</span>
-            </div>
+        <div className="absolute top-0 left-0 right-0 h-12 bg-zinc-950/95 border-b border-zinc-800/80 z-20 flex items-center justify-between px-3.5 backdrop-blur-md">
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isPlaying ? 'bg-red-500 animate-pulse' : 'bg-orange-400'
+              }`}
+            />
+            <span className="text-xs font-semibold text-zinc-200">
+              {isPlaying ? 'Lecture...' : 'Arrêt sur image'}
+            </span>
+            <span className="text-[11px] text-zinc-500 font-mono hidden sm:inline">
+              • Extrait {currentMaxDuration}s
+            </span>
           </div>
 
-          <button
-            type="button"
-            onClick={toggleMute}
-            className="absolute top-3 right-3 p-2 rounded-xl bg-black/75 hover:bg-black/90 backdrop-blur-md text-zinc-300 hover:text-white transition-colors border border-white/10 shadow-lg z-20 pointer-events-auto"
-            title={isMuted ? 'Activer le son' : 'Couper le son'}
-          >
-            {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4" />}
-          </button>
-        </>
+          <div className="flex items-center gap-2.5">
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[10px] uppercase font-bold tracking-wider text-zinc-400">
+              <Lock className="w-3 h-3 text-orange-400" />
+              <span>Titre masqué</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={toggleMute}
+              className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white transition-colors border border-zinc-800 pointer-events-auto shadow"
+              title={isMuted ? 'Activer le son' : 'Couper le son'}
+            >
+              {isMuted ? (
+                <VolumeX className="w-3.5 h-3.5 text-red-400" />
+              ) : (
+                <Volume2 className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 
+        Subtle Bottom Gradient Mask:
+        Prevents YouTube's pause suggestions / "More videos" button from appearing at the bottom.
+      */}
+      {!isGameOver && (
+        <div className="absolute bottom-0 left-0 right-0 h-9 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent z-20 pointer-events-none" />
       )}
 
       {/* Unlocked Full Video Banner */}
@@ -363,7 +390,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
         <div className="absolute top-3 left-3 z-20 pointer-events-none">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/80 backdrop-blur-md border border-emerald-500/40 text-xs font-semibold text-white shadow-lg">
             <Eye className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Lecteur débloqué</span>
+            <span>Lecteur complet débloqué</span>
           </div>
         </div>
       )}
@@ -372,8 +399,12 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
       {hasError && (
         <div className="absolute inset-0 bg-red-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30">
           <AlertTriangle className="w-10 h-10 text-red-400 mb-2" />
-          <h4 className="text-red-200 font-semibold text-base mb-1">Impossible de charger cette vidéo</h4>
-          <p className="text-red-300 text-xs mb-3">{debugInfo || "Problème d'intégration YouTube IFrame"}</p>
+          <h4 className="text-red-200 font-semibold text-base mb-1">
+            Impossible de charger cette vidéo
+          </h4>
+          <p className="text-red-300 text-xs mb-3">
+            {debugInfo || "Problème d'intégration YouTube IFrame"}
+          </p>
         </div>
       )}
     </div>
