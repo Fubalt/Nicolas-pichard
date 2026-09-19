@@ -58,9 +58,18 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
   const [debugInfo, setDebugInfo] = useState<string>('');
   const [hasEverPlayed, setHasEverPlayed] = useState(false);
 
+  // Reset standby screen and seek player whenever a new game or startTime is set
   useEffect(() => {
-    setHasEverPlayed(false);
-  }, [videoId]);
+    if (gameStatus === 'ready') {
+      setHasEverPlayed(false);
+      if (playerRef.current && playerReady && typeof playerRef.current.seekTo === 'function') {
+        try {
+          playerRef.current.seekTo(startTime, true);
+          playerRef.current.pauseVideo();
+        } catch (e) {}
+      }
+    }
+  }, [videoId, startTime, gameStatus, playerReady]);
 
   // Sync external volume and mute changes to the player
   useEffect(() => {
@@ -161,6 +170,13 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
           if (state === 1) {
             disableCaptions(playerRef.current);
 
+            // Verify the player has actually arrived near startTime before counting duration
+            const curTime = playerRef.current.getCurrentTime?.();
+            if (typeof curTime === 'number' && Math.abs(curTime - startTime) > 2.5) {
+              progressAnimFrameRef.current = requestAnimationFrame(checkProgress);
+              return;
+            }
+
             if (playbackStartTime === null) {
               playbackStartTime = performance.now();
             }
@@ -186,8 +202,8 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
 
       progressAnimFrameRef.current = requestAnimationFrame(checkProgress);
 
-      // Fallback safety timeout
-      const safetyTimeoutMs = Math.max(150, maxDuration * 1000 + 400);
+      // Fallback safety timeout (with enough buffer for initial network buffering)
+      const safetyTimeoutMs = Math.max(3000, maxDuration * 1000 + 4000);
       timerRef.current = setTimeout(() => {
         if (isCurrentlyPlayingRef.current) {
           stopPlayback(false);
