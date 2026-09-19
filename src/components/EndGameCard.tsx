@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { VideoItem, GuessResult, GameStatus } from '@/types/game';
+import { VideoItem, GuessResult, GameStatus, GameMode } from '@/types/game';
 import { ATTEMPT_DURATIONS } from '@/constants/game';
 import { formatTimecode } from '@/lib/utils';
 import confetti from 'canvas-confetti';
@@ -12,6 +12,7 @@ interface Props {
   startTime: number;
   gameStatus: GameStatus;
   guesses: GuessResult[];
+  gameMode?: GameMode;
   onPlayAgain: () => void;
   onPlayFullVideo?: () => void;
 }
@@ -21,6 +22,7 @@ export function EndGameCard({
   startTime,
   gameStatus,
   guesses,
+  gameMode = 'all',
   onPlayAgain,
   onPlayFullVideo,
 }: Props) {
@@ -55,7 +57,8 @@ export function EndGameCard({
 
     const grid = emojis.join(' ');
     const attemptText = isWon ? `${guesses.length}/4 essais` : 'X/4 (Échec)';
-    return `🎬 Nicolas Pichard • ${attemptText}\n${grid}\n🔊 https://youtube.com/watch?v=${video.id}&t=${startTime}s`;
+    const modeTag = gameMode === 'classic' ? ' [Classique ≤ 2016]' : '';
+    return `🎬 Nicolas Pichard${modeTag} • ${attemptText}\n${grid}\n🔊 https://youtube.com/watch?v=${video.id}&t=${startTime}s`;
   };
 
   const handleShare = async () => {
@@ -98,6 +101,17 @@ export function EndGameCard({
                 ? `Trouvé au palier de ${unlockedDuration}s (essai ${successfulAttempt + 1}/4)`
                 : 'Tu feras mieux la prochaine fois !'}
             </p>
+            <div className="flex items-center gap-2 mt-1.5">
+              <span
+                className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md border ${
+                  gameMode === 'classic'
+                    ? 'bg-orange-500/10 text-orange-300 border-orange-500/30'
+                    : 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                }`}
+              >
+                {gameMode === 'classic' ? '📼 Mode Classique (≤ 2016)' : '🌟 Catalogue complet'}
+              </span>
+            </div>
           </div>
         </div>
 

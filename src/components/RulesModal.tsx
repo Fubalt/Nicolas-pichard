@@ -76,6 +76,12 @@ export function RulesModal({ isOpen, onClose }: Props) {
                 Tape quelques lettres dans le champ pour utiliser l&apos;autocomplétion des titres.
               </span>
             </li>
+            <li className="flex items-start gap-2">
+              <span className="text-orange-400 font-bold">★</span>
+              <span>
+                <strong>2 modes de jeu disponibles :</strong> &quot;Toutes les époques&quot; (205 vidéos) ou &quot;Classique ≤ 2016&quot; (les 89 vidéos cultes du « DESSIN » au « McDonald&apos;s »).
+              </span>
+            </li>
           </ul>
         </div>
 

@@ -8,6 +8,7 @@ export interface VideoItem {
 }
 
 export type GameStatus = 'ready' | 'playing' | 'won' | 'lost';
+export type GameMode = 'all' | 'classic';
 
 export interface GuessResult {
   attemptIndex: number;

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { VideoItem, GameStatus, GuessResult } from '@/types/game';
-import { CYPRIEN_VIDEOS, getRandomGameVideo } from '@/data/videos';
+import { VideoItem, GameStatus, GuessResult, GameMode } from '@/types/game';
+import { CYPRIEN_ALL_VIDEOS, CYPRIEN_CLASSIC_VIDEOS, getRandomGameVideo } from '@/data/videos';
 import { ATTEMPT_DURATIONS } from '@/constants/game';
 import { normalizeTitle, matchesSearch, cleanDisplayTitle } from '@/lib/utils';
 import { YouTubePlayer, YouTubePlayerRef } from '@/components/YouTubePlayer';
@@ -13,9 +13,10 @@ import { ActionControls } from '@/components/ActionControls';
 import { EndGameCard } from '@/components/EndGameCard';
 import { Header } from '@/components/Header';
 import { RulesModal } from '@/components/RulesModal';
-import { Music, Volume2, Sparkles, Trophy } from 'lucide-react';
+import { Music, Volume2, Sparkles, Trophy, History } from 'lucide-react';
 
 export default function Home() {
+  const [gameMode, setGameMode] = useState<GameMode>('all');
   const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(null);
   const [startTime, setStartTime] = useState<number>(10);
   const [currentAttempt, setCurrentAttempt] = useState<number>(0);
@@ -31,16 +32,14 @@ export default function Home() {
 
   const playerRef = useRef<YouTubePlayerRef>(null);
 
-  // Initialize first game on mount
-  useEffect(() => {
-    startNewGame();
-  }, []);
+  const currentCatalog = gameMode === 'classic' ? CYPRIEN_CLASSIC_VIDEOS : CYPRIEN_ALL_VIDEOS;
 
-  const startNewGame = useCallback(() => {
+  const startNewGame = useCallback((targetMode?: GameMode) => {
     if (playerRef.current) {
       playerRef.current.pauseSnippet();
     }
-    const { video, startTime: newStartTime } = getRandomGameVideo();
+    const mode = targetMode ?? gameMode;
+    const { video, startTime: newStartTime } = getRandomGameVideo({ mode });
     setCurrentVideo(video);
     setStartTime(newStartTime);
     setCurrentAttempt(0);
@@ -49,7 +48,29 @@ export default function Home() {
     setIsPlaying(false);
     setSnippetProgress(0);
     setSnippetElapsed(0);
+  }, [gameMode]);
+
+  // Initialize game on mount and restore saved mode if any
+  useEffect(() => {
+    let initialMode: GameMode = 'all';
+    try {
+      const saved = localStorage.getItem('nicolas_pichard_game_mode') as GameMode;
+      if (saved === 'all' || saved === 'classic') {
+        initialMode = saved;
+        setGameMode(saved);
+      }
+    } catch (e) {}
+    startNewGame(initialMode);
   }, []);
+
+  const handleSelectMode = (newMode: GameMode) => {
+    if (newMode === gameMode) return;
+    setGameMode(newMode);
+    try {
+      localStorage.setItem('nicolas_pichard_game_mode', newMode);
+    } catch (e) {}
+    startNewGame(newMode);
+  };
 
   const handleVolumeChange = (newVol: number) => {
     setVolume(newVol);
@@ -195,10 +216,47 @@ export default function Home() {
       <Header
         onOpenRules={() => setIsRulesOpen(true)}
         onNewGame={() => startNewGame()}
-        totalVideos={CYPRIEN_VIDEOS.length}
+        totalVideos={currentCatalog.length}
       />
 
       <main className="flex-1 max-w-xl w-full mx-auto px-4 py-6 flex flex-col gap-5">
+        {/* Game Mode Selector */}
+        <div className="flex flex-col items-center gap-1.5 w-full">
+          <div className="bg-zinc-900/90 border border-zinc-800/90 p-1 rounded-2xl flex items-center gap-1 w-full shadow-lg backdrop-blur-md">
+            <button
+              type="button"
+              onClick={() => handleSelectMode('all')}
+              className={`flex-1 py-2 px-2 sm:px-4 rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 text-xs font-bold transition-all select-none cursor-pointer ${
+                gameMode === 'all'
+                  ? 'bg-zinc-800 text-white shadow-md border border-zinc-700/60'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+              }`}
+            >
+              <Sparkles className={`w-3.5 h-3.5 ${gameMode === 'all' ? 'text-amber-400' : 'text-zinc-500'}`} />
+              <span>Toutes les époques ({CYPRIEN_ALL_VIDEOS.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectMode('classic')}
+              className={`flex-1 py-2 px-2 sm:px-4 rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 text-xs font-bold transition-all select-none cursor-pointer ${
+                gameMode === 'classic'
+                  ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md shadow-orange-950/40 border border-orange-500/40'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+              }`}
+            >
+              <History className={`w-3.5 h-3.5 ${gameMode === 'classic' ? 'text-amber-200' : 'text-zinc-500'}`} />
+              <span>Classique ≤ 2016 ({CYPRIEN_CLASSIC_VIDEOS.length})</span>
+            </button>
+          </div>
+
+          <p className="text-[11px] text-zinc-500 font-medium text-center">
+            {gameMode === 'classic'
+              ? '📼 Époque culte : du « DESSIN » (déc. 2016) au « McDonald\'s » (2010)'
+              : '🌟 Catalogue complet : toutes les vidéos de 2010 à aujourd\'hui'}
+          </p>
+        </div>
+
         {/* Video Player (Visible 16:9 snippet player with freeze frame) */}
         {currentVideo && (
           <YouTubePlayer
@@ -255,7 +313,7 @@ export default function Home() {
             />
 
             <GuessInput
-              catalog={CYPRIEN_VIDEOS}
+              catalog={currentCatalog}
               onGuess={handleGuess}
               disabled={!playerReady}
               placeholder="Tape le nom d'une vidéo (ex: Technophobe, Les geeks...)"
@@ -274,7 +332,8 @@ export default function Home() {
               startTime={startTime}
               gameStatus={gameStatus}
               guesses={guesses}
-              onPlayAgain={startNewGame}
+              gameMode={gameMode}
+              onPlayAgain={() => startNewGame()}
               onPlayFullVideo={() => playerRef.current?.playFull()}
             />
           )
