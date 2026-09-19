@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { GameStatus } from '@/types/game';
 import { ATTEMPT_DURATIONS } from '@/constants/game';
-import { Volume2, VolumeX, Eye, AlertTriangle, ShieldAlert, Lock } from 'lucide-react';
+import { Volume2, VolumeX, Eye, AlertTriangle } from 'lucide-react';
 
 export interface YouTubePlayerRef {
   playSnippet: () => void;
@@ -321,68 +321,55 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
   return (
     <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-zinc-800 shadow-2xl transition-all select-none">
       {/* 
-        YouTube IFrame Player:
-        NO ZOOM! The video plays at 100% natural resolution and scale (scale-100).
-        During gameplay, pointer-events are disabled so hovering never triggers YouTube UI overlays.
-        When game is won/lost, pointer-events are enabled and native controls unlock.
+        YouTube IFrame Player with subtle cinematic crop (1.20x):
+        Pushes YouTube's top title bar (~48px) and pause "More videos" shelf
+        cleanly outside the overflow:hidden container.
+        The video remains clear, natural, and free of any intrusive YouTube branding.
+        When game is won/lost, transitions smoothly back to 1.0x with native controls unlocked.
       */}
       <div
-        className={`w-full h-full relative ${
-          isGameOver ? 'pointer-events-auto' : 'pointer-events-none'
+        className={`w-full h-full relative overflow-hidden transition-all duration-500 ease-out ${
+          isGameOver
+            ? 'scale-100 translate-y-0 pointer-events-auto'
+            : 'scale-[1.20] -translate-y-[1.5%] pointer-events-none select-none'
         }`}
       >
         <div ref={containerRef} className="w-full h-full" />
       </div>
 
-      {/* 
-        Clean Top HUD Bar (Replaces YouTube's top title bar without zooming the video):
-        This bar covers the top ~48px where YouTube displays the title/avatar,
-        providing an elegant in-game HUD instead of an artificial video crop.
-      */}
+      {/* Floating Status Pill & Controls */}
       {!isGameOver && (
-        <div className="absolute top-0 left-0 right-0 h-12 bg-zinc-950/95 border-b border-zinc-800/80 z-20 flex items-center justify-between px-3.5 backdrop-blur-md">
-          <div className="flex items-center gap-2">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                isPlaying ? 'bg-red-500 animate-pulse' : 'bg-orange-400'
-              }`}
-            />
-            <span className="text-xs font-semibold text-zinc-200">
-              {isPlaying ? 'Lecture...' : 'Arrêt sur image'}
-            </span>
-            <span className="text-[11px] text-zinc-500 font-mono hidden sm:inline">
-              • Extrait {currentMaxDuration}s
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[10px] uppercase font-bold tracking-wider text-zinc-400">
-              <Lock className="w-3 h-3 text-orange-400" />
-              <span>Titre masqué</span>
+        <>
+          <div className="absolute top-3 left-3 pointer-events-none z-20 flex items-center gap-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/75 backdrop-blur-md border border-white/10 text-[11px] font-semibold text-zinc-200 shadow-md">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isPlaying ? 'bg-red-500 animate-pulse' : 'bg-orange-400'
+                }`}
+              />
+              <span>{isPlaying ? 'Lecture...' : 'Arrêt sur image'}</span>
+              <span className="text-zinc-500 font-mono hidden sm:inline">
+                • {currentMaxDuration}s
+              </span>
             </div>
-
-            <button
-              type="button"
-              onClick={toggleMute}
-              className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white transition-colors border border-zinc-800 pointer-events-auto shadow"
-              title={isMuted ? 'Activer le son' : 'Couper le son'}
-            >
-              {isMuted ? (
-                <VolumeX className="w-3.5 h-3.5 text-red-400" />
-              ) : (
-                <Volume2 className="w-3.5 h-3.5" />
-              )}
-            </button>
           </div>
-        </div>
-      )}
 
-      {/* 
-        Subtle Bottom Gradient Mask:
-        Prevents YouTube's pause suggestions / "More videos" button from appearing at the bottom.
-      */}
-      {!isGameOver && (
-        <div className="absolute bottom-0 left-0 right-0 h-9 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent z-20 pointer-events-none" />
+          <button
+            type="button"
+            onClick={toggleMute}
+            className="absolute top-3 right-3 p-2 rounded-xl bg-black/75 hover:bg-black/90 backdrop-blur-md text-zinc-300 hover:text-white transition-colors border border-white/10 shadow-lg z-20 pointer-events-auto"
+            title={isMuted ? 'Activer le son' : 'Couper le son'}
+          >
+            {isMuted ? (
+              <VolumeX className="w-4 h-4 text-red-400" />
+            ) : (
+              <Volume2 className="w-4 h-4" />
+            )}
+          </button>
+
+          {/* Minimalist bottom guard to guarantee suggestions never flash */}
+          <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-10" />
+        </>
       )}
 
       {/* Unlocked Full Video Banner */}
