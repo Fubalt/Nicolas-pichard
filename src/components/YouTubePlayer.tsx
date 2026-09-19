@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { GameStatus } from '@/types/game';
 import { ATTEMPT_DURATIONS } from '@/constants/game';
-import { Volume2, VolumeX, Eye, AlertTriangle } from 'lucide-react';
+import { Volume2, VolumeX, Eye, AlertTriangle, Play, RotateCcw } from 'lucide-react';
 
 export interface YouTubePlayerRef {
   playSnippet: () => void;
@@ -53,6 +53,11 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
   const [isMuted, setIsMuted] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string>('');
+  const [hasEverPlayed, setHasEverPlayed] = useState(false);
+
+  useEffect(() => {
+    setHasEverPlayed(false);
+  }, [videoId]);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const progressAnimFrameRef = useRef<number | null>(null);
@@ -108,6 +113,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
   // Play snippet of current tier starting from startTime
   const playSnippet = useCallback(() => {
     if (!playerRef.current || !playerReady) return;
+    setHasEverPlayed(true);
 
     if (timerRef.current) clearTimeout(timerRef.current);
     if (progressAnimFrameRef.current) cancelAnimationFrame(progressAnimFrameRef.current);
@@ -261,7 +267,6 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
     try {
       playerRef.current = new window.YT.Player(containerRef.current, {
         videoId,
-        host: 'https://www.youtube-nocookie.com',
         width: '100%',
         height: '100%',
         playerVars: {
@@ -319,45 +324,69 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
   };
 
   return (
-    <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-zinc-800 shadow-2xl transition-all select-none">
+    <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-zinc-800 shadow-2xl transition-all select-none group">
       {/* 
-        YouTube IFrame Player with subtle cinematic crop (1.20x):
-        Pushes YouTube's top title bar (~48px) and pause "More videos" shelf
-        cleanly outside the overflow:hidden container.
-        The video remains clear, natural, and free of any intrusive YouTube branding.
-        When game is won/lost, transitions smoothly back to 1.0x with native controls unlocked.
+        Anti-cheat Framing:
+        Scale 1.32 with -2.8% vertical translation pushes:
+        - The top ~68px (title bar, channel avatar, share, watch later)
+        - The bottom ~52px (suggestions drawer, subtitles, watermark)
+        outside of the overflow:hidden container.
+        pointer-events-none prevents hovering and native YouTube overlays.
       */}
       <div
         className={`w-full h-full relative overflow-hidden transition-all duration-500 ease-out ${
           isGameOver
             ? 'scale-100 translate-y-0 pointer-events-auto'
-            : 'scale-[1.20] -translate-y-[1.5%] pointer-events-none select-none'
+            : 'scale-[1.32] -translate-y-[2.8%] pointer-events-none select-none'
         }`}
       >
         <div ref={containerRef} className="w-full h-full" />
       </div>
 
-      {/* Floating Status Pill & Controls */}
-      {!isGameOver && (
+      {/* 
+        Sleek Standby Screen before the user plays the snippet for the first time:
+        Eliminates the initial YouTube poster with the ugly unclickable play button and title!
+      */}
+      {!hasEverPlayed && !isGameOver && (
+        <div
+          onClick={playSnippet}
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-zinc-950/85 backdrop-blur-md cursor-pointer transition-all hover:bg-zinc-950/75 group"
+        >
+          <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-orange-600 to-amber-500 flex items-center justify-center text-white shadow-xl shadow-orange-500/25 group-hover:scale-110 transition-transform mb-3">
+            <Play className="w-7 h-7 fill-white ml-1" />
+          </div>
+          <span className="text-sm font-bold tracking-wide text-zinc-100 group-hover:text-orange-400 transition-colors">
+            Lancer l'extrait ({currentMaxDuration}s)
+          </span>
+          <span className="text-xs text-zinc-400 mt-1 font-mono">
+            Cliquer ici ou appuyer sur [Espace]
+          </span>
+        </div>
+      )}
+
+      {/* Floating Status Pill & Controls (active after first play) */}
+      {!isGameOver && hasEverPlayed && (
         <>
+          {/* Top-left status badge */}
           <div className="absolute top-3 left-3 pointer-events-none z-20 flex items-center gap-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/75 backdrop-blur-md border border-white/10 text-[11px] font-semibold text-zinc-200 shadow-md">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/80 backdrop-blur-md border border-white/10 text-[11px] font-semibold text-zinc-200 shadow-md">
               <span
                 className={`w-2 h-2 rounded-full ${
                   isPlaying ? 'bg-red-500 animate-pulse' : 'bg-orange-400'
                 }`}
               />
-              <span>{isPlaying ? 'Lecture...' : 'Arrêt sur image'}</span>
+              <span>{isPlaying ? 'Lecture en cours...' : 'Arrêt sur image'}</span>
               <span className="text-zinc-500 font-mono hidden sm:inline">
                 • {currentMaxDuration}s
               </span>
             </div>
           </div>
 
+          {/* Top-right audio mute button */}
           <button
             type="button"
             onClick={toggleMute}
-            className="absolute top-3 right-3 p-2 rounded-xl bg-black/75 hover:bg-black/90 backdrop-blur-md text-zinc-300 hover:text-white transition-colors border border-white/10 shadow-lg z-20 pointer-events-auto"
+            className="absolute top-3 right-3 p-2 rounded-xl bg-black/80 hover:bg-black/95 backdrop-blur-md text-zinc-300 hover:text-white transition-colors border border-white/10 shadow-lg z-20 pointer-events-auto"
             title={isMuted ? 'Activer le son' : 'Couper le son'}
           >
             {isMuted ? (
@@ -367,8 +396,22 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
             )}
           </button>
 
-          {/* Minimalist bottom guard to guarantee suggestions never flash */}
-          <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-10" />
+          {/* Tap video to replay when frozen */}
+          {!isPlaying && (
+            <div
+              onClick={playSnippet}
+              className="absolute inset-0 z-10 cursor-pointer flex items-center justify-center pointer-events-auto"
+              title="Cliquer pour rejouer l'extrait"
+            >
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity p-3 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-zinc-200 shadow-xl flex items-center gap-2">
+                <RotateCcw className="w-4 h-4 text-orange-400" />
+                <span className="text-xs font-semibold">Rejouer ({currentMaxDuration}s)</span>
+              </div>
+            </div>
+          )}
+
+          {/* Bottom gradient guard ensuring suggestions / subtitles never leak */}
+          <div className="absolute bottom-0 left-0 right-0 h-14 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none z-10" />
         </>
       )}
 
