@@ -2,13 +2,17 @@
 
 import React from 'react';
 import { ATTEMPT_DURATIONS, ATTEMPT_INCREMENTS } from '@/constants/game';
-import { Lock, Unlock } from 'lucide-react';
+import { Lock, Unlock, Volume2, Volume1, VolumeX } from 'lucide-react';
 
 interface Props {
   currentAttempt: number;
   currentSnippetProgress: number; // 0 to 1 of the unlocked segment
   currentElapsed: number; // in seconds
   isPlaying: boolean;
+  volume: number;
+  isMuted: boolean;
+  onVolumeChange: (vol: number) => void;
+  onToggleMute: () => void;
 }
 
 export function TimelineProgressBar({
@@ -16,6 +20,10 @@ export function TimelineProgressBar({
   currentSnippetProgress,
   currentElapsed,
   isPlaying,
+  volume,
+  isMuted,
+  onVolumeChange,
+  onToggleMute,
 }: Props) {
   // We can represent each tier with a clean percentage width for great visual balance
   const segmentWidths = ['15%', '25%', '30%', '30%'];
@@ -23,20 +31,53 @@ export function TimelineProgressBar({
 
   return (
     <div className="w-full space-y-2">
-      {/* Time indicators */}
-      <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
-        <div className="flex items-center gap-1.5">
-          <span className={`inline-block w-2 h-2 rounded-full ${isPlaying ? 'bg-red-500 animate-ping' : 'bg-zinc-600'}`} />
+      {/* Time indicators & External Volume Control */}
+      <div className="flex items-center justify-between text-xs text-zinc-400 font-mono gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className={`inline-block w-2 h-2 rounded-full ${isPlaying ? 'bg-red-500 animate-pulse' : 'bg-zinc-600'}`} />
           <span className="font-semibold text-zinc-200">
             {currentElapsed.toFixed(1)}s
           </span>
           <span className="text-zinc-600">/</span>
           <span className="text-zinc-400 font-medium">
-            {maxUnlockedDuration.toFixed(1)}s débloqués
+            {maxUnlockedDuration.toFixed(1)}s
           </span>
         </div>
 
-        <div className="text-zinc-400 text-[11px] font-medium">
+        {/* Clean External Volume Slider */}
+        <div className="flex items-center gap-1.5 bg-zinc-900/90 border border-zinc-800/90 px-2 py-1 rounded-lg shadow-sm">
+          <button
+            type="button"
+            onClick={onToggleMute}
+            className="text-zinc-400 hover:text-white transition-colors focus:outline-none p-0.5"
+            title={isMuted ? 'Activer le son' : 'Couper le son'}
+          >
+            {isMuted || volume === 0 ? (
+              <VolumeX className="w-3.5 h-3.5 text-red-400" />
+            ) : volume < 50 ? (
+              <Volume1 className="w-3.5 h-3.5 text-orange-400" />
+            ) : (
+              <Volume2 className="w-3.5 h-3.5 text-zinc-300" />
+            )}
+          </button>
+
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={isMuted ? 0 : volume}
+            onChange={(e) => onVolumeChange(Number(e.target.value))}
+            className="w-14 sm:w-20 h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-orange-500 focus:outline-none"
+            title={`Volume : ${isMuted ? 0 : volume}%`}
+          />
+
+          <span className="text-[10px] text-zinc-400 w-6 text-right tabular-nums">
+            {isMuted ? '0%' : `${volume}%`}
+          </span>
+        </div>
+
+        <div className="text-zinc-400 text-[11px] font-medium shrink-0">
           Essai {Math.min(currentAttempt + 1, 4)} / 4
         </div>
       </div>

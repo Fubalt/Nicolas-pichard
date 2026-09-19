@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { GameStatus } from '@/types/game';
 import { ATTEMPT_DURATIONS } from '@/constants/game';
-import { Volume2, Volume1, VolumeX, Eye, AlertTriangle, Play, RotateCcw } from 'lucide-react';
+import { Eye, AlertTriangle, Play, RotateCcw } from 'lucide-react';
 
 export interface YouTubePlayerRef {
   playSnippet: () => void;
@@ -24,6 +24,8 @@ interface Props {
   isPlaying: boolean;
   setIsPlaying: (playing: boolean) => void;
   onTogglePlay?: () => void;
+  volume: number;
+  isMuted: boolean;
 }
 
 declare global {
@@ -44,14 +46,14 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
     onReady,
     isPlaying,
     setIsPlaying,
+    volume,
+    isMuted,
   },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
   const [playerReady, setPlayerReady] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState<number>(80);
   const [hasError, setHasError] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string>('');
   const [hasEverPlayed, setHasEverPlayed] = useState(false);
@@ -59,6 +61,19 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
   useEffect(() => {
     setHasEverPlayed(false);
   }, [videoId]);
+
+  // Sync external volume and mute changes to the player
+  useEffect(() => {
+    if (!playerRef.current) return;
+    try {
+      if (isMuted) {
+        playerRef.current.mute?.();
+      } else {
+        playerRef.current.unMute?.();
+        playerRef.current.setVolume?.(volume);
+      }
+    } catch (e) {}
+  }, [volume, isMuted]);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const progressAnimFrameRef = useRef<number | null>(null);
@@ -315,35 +330,6 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
     }
   }, [videoId, startTime, gameStatus, onReady, stopPlayback, disableCaptions]);
 
-  const toggleMute = () => {
-    if (!playerRef.current) return;
-    if (isMuted) {
-      playerRef.current.unMute?.();
-      const targetVol = volume === 0 ? 60 : volume;
-      playerRef.current.setVolume?.(targetVol);
-      if (volume === 0) setVolume(60);
-      setIsMuted(false);
-    } else {
-      playerRef.current.mute?.();
-      setIsMuted(true);
-    }
-  };
-
-  const handleVolumeChange = (newVol: number) => {
-    setVolume(newVol);
-    if (!playerRef.current) return;
-    if (newVol === 0) {
-      playerRef.current.mute?.();
-      setIsMuted(true);
-    } else {
-      if (isMuted) {
-        playerRef.current.unMute?.();
-        setIsMuted(false);
-      }
-      playerRef.current.setVolume?.(newVol);
-    }
-  };
-
   return (
     <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-zinc-800 shadow-2xl transition-all select-none group">
       {/* 
@@ -385,61 +371,9 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
         </div>
       )}
 
-      {/* Top-right audio volume control (Mute toggle + Slider) - Always accessible during game */}
-      {!isGameOver && (
-        <div className="absolute top-3 right-3 z-30 flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-black/80 hover:bg-black/95 backdrop-blur-md border border-white/10 shadow-lg pointer-events-auto transition-all">
-          <button
-            type="button"
-            onClick={toggleMute}
-            className="text-zinc-300 hover:text-white transition-colors focus:outline-none p-0.5"
-            title={isMuted ? 'Activer le son' : 'Couper le son'}
-          >
-            {isMuted || volume === 0 ? (
-              <VolumeX className="w-4 h-4 text-red-400" />
-            ) : volume < 50 ? (
-              <Volume1 className="w-4 h-4 text-orange-400" />
-            ) : (
-              <Volume2 className="w-4 h-4 text-zinc-200" />
-            )}
-          </button>
-
-          <div className="flex items-center gap-1.5 w-16 sm:w-20">
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={isMuted ? 0 : volume}
-              onChange={(e) => handleVolumeChange(Number(e.target.value))}
-              className="w-full h-1.5 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-orange-500 focus:outline-none"
-              title={`Volume : ${isMuted ? 0 : volume}%`}
-            />
-          </div>
-
-          <span className="text-[10px] font-mono text-zinc-400 w-6 text-right tabular-nums">
-            {isMuted ? '0%' : `${volume}%`}
-          </span>
-        </div>
-      )}
-
-      {/* Floating Status Pill & Video Interactions (active after first play) */}
+      {/* Video Interactions when frozen (Tap to replay) */}
       {!isGameOver && hasEverPlayed && (
         <>
-          {/* Top-left status badge */}
-          <div className="absolute top-3 left-3 pointer-events-none z-20 flex items-center gap-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/80 backdrop-blur-md border border-white/10 text-[11px] font-semibold text-zinc-200 shadow-md">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  isPlaying ? 'bg-red-500 animate-pulse' : 'bg-orange-400'
-                }`}
-              />
-              <span>{isPlaying ? 'Lecture en cours...' : 'Arrêt sur image'}</span>
-              <span className="text-zinc-500 font-mono hidden sm:inline">
-                • {currentMaxDuration}s
-              </span>
-            </div>
-          </div>
-
           {/* Tap video to replay when frozen */}
           {!isPlaying && (
             <div

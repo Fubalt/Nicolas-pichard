@@ -27,6 +27,8 @@ export default function Home() {
   const [playerReady, setPlayerReady] = useState<boolean>(false);
   const [isRulesOpen, setIsRulesOpen] = useState<boolean>(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [volume, setVolume] = useState<number>(80);
+  const [isMuted, setIsMuted] = useState<boolean>(false);
 
   const playerRef = useRef<YouTubePlayerRef>(null);
 
@@ -47,6 +49,24 @@ export default function Home() {
     setSnippetElapsed(0);
     setFeedbackMessage(null);
   }, []);
+
+  const handleVolumeChange = (newVol: number) => {
+    setVolume(newVol);
+    if (newVol === 0) {
+      setIsMuted(true);
+    } else if (isMuted) {
+      setIsMuted(false);
+    }
+  };
+
+  const handleToggleMute = () => {
+    if (isMuted) {
+      if (volume === 0) setVolume(60);
+      setIsMuted(false);
+    } else {
+      setIsMuted(true);
+    }
+  };
 
   // Keyboard shortcut: Spacebar to toggle Play/Pause
   useEffect(() => {
@@ -209,6 +229,8 @@ export default function Home() {
             gameStatus={gameStatus}
             isPlaying={isPlaying}
             setIsPlaying={setIsPlaying}
+            volume={volume}
+            isMuted={isMuted}
             onTogglePlay={handleTogglePlay}
             onReady={() => setPlayerReady(true)}
             onProgressUpdate={(prog, elapsed) => {
@@ -221,12 +243,16 @@ export default function Home() {
           />
         )}
 
-        {/* Timeline Progress Bar */}
+        {/* Timeline Progress Bar with External Volume Control */}
         <TimelineProgressBar
           currentAttempt={currentAttempt}
           currentSnippetProgress={snippetProgress}
           currentElapsed={snippetElapsed}
           isPlaying={isPlaying}
+          volume={volume}
+          isMuted={isMuted}
+          onVolumeChange={handleVolumeChange}
+          onToggleMute={handleToggleMute}
         />
 
         {/* Guess History (4 tiers) */}
