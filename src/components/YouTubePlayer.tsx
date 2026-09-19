@@ -9,6 +9,7 @@ export interface YouTubePlayerRef {
   playSnippet: () => void;
   pauseSnippet: () => void;
   replaySnippet: () => void;
+  playContinuation: (fromDuration: number, toDuration: number) => void;
   playFull: () => void;
   isReady: boolean;
 }
@@ -242,16 +243,120 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
     }, 50);
   }, [stopPlayback, playSnippet]);
 
+  // Play only the extra incremental seconds granted by skipping/advancing
+  const playContinuation = useCallback(
+    (fromDuration: number, toDuration: number) => {
+      if (!playerRef.current || !playerReady) return;
+
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (progressAnimFrameRef.current) cancelAnimationFrame(progressAnimFrameRef.current);
+
+      const actualFrom = hasEverPlayed ? fromDuration : 0;
+      const additionalDuration = Math.max(0.05, toDuration - actualFrom);
+      const targetStartTime = startTime + actualFrom;
+
+      setHasEverPlayed(true);
+
+      try {
+        disableCaptions(playerRef.current);
+
+        if (isMuted) {
+          playerRef.current.mute?.();
+        } else {
+          playerRef.current.unMute?.();
+          playerRef.current.setVolume?.(volume);
+        }
+
+        // If player isn't already frozen near targetStartTime, seek to targetStartTime
+        const curTime = playerRef.current.getCurrentTime?.();
+        if (typeof curTime !== 'number' || Math.abs(curTime - targetStartTime) > 0.4) {
+          playerRef.current.seekTo(targetStartTime, true);
+        }
+
+        playerRef.current.playVideo();
+        setIsPlaying(true);
+
+        let playbackStartTime: number | null = null;
+
+        const checkProgress = () => {
+          if (!playerRef.current) return;
+
+          try {
+            const state = playerRef.current.getPlayerState?.();
+            // State 1 = PLAYING
+            if (state === 1) {
+              disableCaptions(playerRef.current);
+
+              // Wait until player has arrived near targetStartTime if a seek was needed
+              const currentSec = playerRef.current.getCurrentTime?.();
+              if (typeof currentSec === 'number' && Math.abs(currentSec - targetStartTime) > 1.5) {
+                progressAnimFrameRef.current = requestAnimationFrame(checkProgress);
+                return;
+              }
+
+              if (playbackStartTime === null) {
+                playbackStartTime = performance.now();
+              }
+
+              const elapsedSec = (performance.now() - playbackStartTime) / 1000;
+              const totalElapsedInTier = actualFrom + Math.min(additionalDuration, elapsedSec);
+              const progress = Math.min(1, totalElapsedInTier / toDuration);
+              onProgressUpdate?.(progress, totalElapsedInTier);
+
+              // Freeze immediately when the additional seconds have elapsed
+              if (elapsedSec >= additionalDuration) {
+                stopPlayback(false);
+                onProgressUpdate?.(1, toDuration);
+                onSnippetEnd?.();
+                return;
+              }
+            }
+          } catch (err) {
+            console.error(err);
+          }
+
+          progressAnimFrameRef.current = requestAnimationFrame(checkProgress);
+        };
+
+        progressAnimFrameRef.current = requestAnimationFrame(checkProgress);
+
+        const safetyTimeoutMs = Math.max(3000, additionalDuration * 1000 + 4000);
+        timerRef.current = setTimeout(() => {
+          if (isCurrentlyPlayingRef.current) {
+            stopPlayback(false);
+            onProgressUpdate?.(1, toDuration);
+            onSnippetEnd?.();
+          }
+        }, safetyTimeoutMs);
+      } catch (err) {
+        console.error('Failed to play continuation snippet:', err);
+      }
+    },
+    [
+      playerReady,
+      startTime,
+      hasEverPlayed,
+      isMuted,
+      volume,
+      disableCaptions,
+      stopPlayback,
+      onProgressUpdate,
+      onSnippetEnd,
+      setIsPlaying,
+    ]
+  );
+
   useImperativeHandle(
     ref,
     () => ({
       playSnippet,
       pauseSnippet,
       replaySnippet,
+      playContinuation,
       playFull,
       isReady: playerReady,
     }),
-    [playSnippet, pauseSnippet, replaySnippet, playFull, playerReady]
+    [playSnippet, pauseSnippet, replaySnippet, playContinuation, playFull, playerReady]
   );
 
   // Load YouTube IFrame API

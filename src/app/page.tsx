@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { VideoItem, GameStatus, GuessResult } from '@/types/game';
 import { CYPRIEN_VIDEOS, getRandomGameVideo } from '@/data/videos';
 import { ATTEMPT_DURATIONS } from '@/constants/game';
-import { normalizeTitle, matchesSearch, cleanDisplayTitle, formatTimecode } from '@/lib/utils';
+import { normalizeTitle, matchesSearch, cleanDisplayTitle } from '@/lib/utils';
 import { YouTubePlayer, YouTubePlayerRef } from '@/components/YouTubePlayer';
 import { TimelineProgressBar } from '@/components/TimelineProgressBar';
 import { GuessHistory } from '@/components/GuessHistory';
@@ -13,7 +13,7 @@ import { ActionControls } from '@/components/ActionControls';
 import { EndGameCard } from '@/components/EndGameCard';
 import { Header } from '@/components/Header';
 import { RulesModal } from '@/components/RulesModal';
-import { Music, Volume2, Sparkles, Trophy, FlaskConical, Clock, RotateCcw } from 'lucide-react';
+import { Music, Volume2, Sparkles, Trophy } from 'lucide-react';
 
 export default function Home() {
   const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(null);
@@ -28,7 +28,6 @@ export default function Home() {
   const [isRulesOpen, setIsRulesOpen] = useState<boolean>(false);
   const [volume, setVolume] = useState<number>(80);
   const [isMuted, setIsMuted] = useState<boolean>(false);
-  const [isFixedVideoMode, setIsFixedVideoMode] = useState<boolean>(true);
 
   const playerRef = useRef<YouTubePlayerRef>(null);
 
@@ -37,14 +36,11 @@ export default function Home() {
     startNewGame();
   }, []);
 
-  const startNewGame = useCallback((overrideFixed?: boolean) => {
+  const startNewGame = useCallback(() => {
     if (playerRef.current) {
       playerRef.current.pauseSnippet();
     }
-    const useFixed = overrideFixed !== undefined ? overrideFixed : isFixedVideoMode;
-    const { video, startTime: newStartTime } = getRandomGameVideo({
-      forceSameVideo: useFixed,
-    });
+    const { video, startTime: newStartTime } = getRandomGameVideo();
     setCurrentVideo(video);
     setStartTime(newStartTime);
     setCurrentAttempt(0);
@@ -53,7 +49,7 @@ export default function Home() {
     setIsPlaying(false);
     setSnippetProgress(0);
     setSnippetElapsed(0);
-  }, [isFixedVideoMode]);
+  }, []);
 
   const handleVolumeChange = (newVol: number) => {
     setVolume(newVol);
@@ -127,7 +123,12 @@ export default function Home() {
       // Defeat
       setGameStatus('lost');
     } else {
-      setCurrentAttempt((prev) => prev + 1);
+      const nextAttempt = currentAttempt + 1;
+      const nextDuration = ATTEMPT_DURATIONS[nextAttempt];
+      setCurrentAttempt(nextAttempt);
+      setTimeout(() => {
+        playerRef.current?.playContinuation(currentDuration, nextDuration);
+      }, 50);
     }
   };
 
@@ -179,7 +180,12 @@ export default function Home() {
         // Lost after 4 attempts
         setGameStatus('lost');
       } else {
-        setCurrentAttempt((prev) => prev + 1);
+        const nextAttempt = currentAttempt + 1;
+        const nextDuration = ATTEMPT_DURATIONS[nextAttempt];
+        setCurrentAttempt(nextAttempt);
+        setTimeout(() => {
+          playerRef.current?.playContinuation(currentDuration, nextDuration);
+        }, 50);
       }
     }
   };
@@ -193,50 +199,6 @@ export default function Home() {
       />
 
       <main className="flex-1 max-w-xl w-full mx-auto px-4 py-6 flex flex-col gap-5">
-        {/* Test Mode Card: Timecode Verification */}
-        <div className="bg-zinc-900/90 border border-amber-500/30 rounded-2xl p-3 sm:p-3.5 shadow-xl flex flex-col gap-2.5">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-semibold text-[11px] border border-amber-500/40 flex items-center gap-1.5">
-                <FlaskConical className="w-3.5 h-3.5" />
-                Mode Test
-              </span>
-              <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={isFixedVideoMode}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setIsFixedVideoMode(checked);
-                    startNewGame(checked);
-                  }}
-                  className="rounded border-zinc-700 text-amber-500 focus:ring-amber-500/30 w-4 h-4 bg-zinc-800 cursor-pointer accent-amber-500"
-                />
-                <span className="font-medium">Même vidéo pour tester les timecodes</span>
-              </label>
-            </div>
-
-            <button
-              onClick={() => startNewGame()}
-              className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 rounded-lg border border-amber-500/30 transition-all flex items-center gap-1.5 text-xs font-semibold group cursor-pointer"
-              title="Générer un nouveau timecode aléatoire pour cette vidéo"
-            >
-              <RotateCcw className="w-3 h-3 group-hover:-rotate-45 transition-transform" />
-              Nouveau timecode
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between text-xs font-mono bg-black/50 px-3 py-2 rounded-xl border border-zinc-800/80 text-zinc-300 flex-wrap gap-2">
-            <div className="truncate max-w-[280px] sm:max-w-none text-zinc-400">
-              Vidéo : <span className="text-zinc-100 font-sans font-medium">{currentVideo?.title}</span>
-            </div>
-            <div className="text-amber-400 font-bold flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
-              <span>Timecode départ : {formatTimecode(startTime)} ({startTime}s / {currentVideo?.durationInSeconds}s)</span>
-            </div>
-          </div>
-        </div>
-
         {/* Video Player (Visible 16:9 snippet player with freeze frame) */}
         {currentVideo && (
           <YouTubePlayer
