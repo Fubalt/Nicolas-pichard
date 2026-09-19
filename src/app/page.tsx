@@ -1,69 +1,287 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { VideoItem, GameStatus, GuessResult } from '@/types/game';
+import { CYPRIEN_VIDEOS, getRandomGameVideo } from '@/data/videos';
+import { ATTEMPT_DURATIONS } from '@/constants/game';
+import { normalizeTitle, matchesSearch, cleanDisplayTitle } from '@/lib/utils';
+import { YouTubePlayer, YouTubePlayerRef } from '@/components/YouTubePlayer';
+import { TimelineProgressBar } from '@/components/TimelineProgressBar';
+import { GuessHistory } from '@/components/GuessHistory';
+import { GuessInput } from '@/components/GuessInput';
+import { ActionControls } from '@/components/ActionControls';
+import { EndGameCard } from '@/components/EndGameCard';
+import { Header } from '@/components/Header';
+import { RulesModal } from '@/components/RulesModal';
+import { AlertCircle, Music, Volume2, Sparkles, Trophy } from 'lucide-react';
 
 export default function Home() {
+  const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(null);
+  const [startTime, setStartTime] = useState<number>(10);
+  const [currentAttempt, setCurrentAttempt] = useState<number>(0);
+  const [gameStatus, setGameStatus] = useState<GameStatus>('ready');
+  const [guesses, setGuesses] = useState<GuessResult[]>([]);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [snippetProgress, setSnippetProgress] = useState<number>(0);
+  const [snippetElapsed, setSnippetElapsed] = useState<number>(0);
+  const [playerReady, setPlayerReady] = useState<boolean>(false);
+  const [isRulesOpen, setIsRulesOpen] = useState<boolean>(false);
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+
+  const playerRef = useRef<YouTubePlayerRef>(null);
+
+  // Initialize first game on mount
+  useEffect(() => {
+    startNewGame();
+  }, []);
+
+  const startNewGame = useCallback(() => {
+    const { video, startTime: newStartTime } = getRandomGameVideo();
+    setCurrentVideo(video);
+    setStartTime(newStartTime);
+    setCurrentAttempt(0);
+    setGameStatus('ready');
+    setGuesses([]);
+    setIsPlaying(false);
+    setSnippetProgress(0);
+    setSnippetElapsed(0);
+    setFeedbackMessage(null);
+  }, []);
+
+  // Keyboard shortcut: Spacebar to toggle Play/Pause
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is currently typing in an input
+      if (
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA'
+      ) {
+        return;
+      }
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        handleTogglePlay();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPlaying, gameStatus, playerReady]);
+
+  const handleTogglePlay = () => {
+    if (!playerRef.current || !currentVideo) return;
+    if (gameStatus === 'won' || gameStatus === 'lost') return;
+
+    if (isPlaying) {
+      playerRef.current.pauseSnippet();
+    } else {
+      setGameStatus('playing');
+      playerRef.current.playSnippet();
+    }
+  };
+
+  const handleSkip = () => {
+    if (gameStatus === 'won' || gameStatus === 'lost') return;
+    if (playerRef.current && isPlaying) {
+      playerRef.current.pauseSnippet();
+    }
+
+    const currentDuration = ATTEMPT_DURATIONS[currentAttempt];
+    const newGuesses: GuessResult[] = [
+      ...guesses,
+      {
+        attemptIndex: currentAttempt,
+        type: 'skipped',
+        tierDuration: currentDuration,
+      },
+    ];
+    setGuesses(newGuesses);
+
+    if (currentAttempt + 1 >= 4) {
+      // Defeat
+      setGameStatus('lost');
+      setFeedbackMessage('Dommage ! Découvre la vidéo ci-dessous.');
+    } else {
+      setCurrentAttempt((prev) => prev + 1);
+      const nextDuration = ATTEMPT_DURATIONS[currentAttempt + 1];
+      setFeedbackMessage(`Palier suivant débloqué : ${nextDuration}s`);
+      setTimeout(() => setFeedbackMessage(null), 3000);
+    }
+  };
+
+  const handleGuess = (guessedTitle: string) => {
+    if (!currentVideo || gameStatus === 'won' || gameStatus === 'lost') return;
+    if (playerRef.current && isPlaying) {
+      playerRef.current.pauseSnippet();
+    }
+
+    const normGuess = normalizeTitle(guessedTitle);
+    const normTarget = normalizeTitle(currentVideo.title);
+
+    const isCorrect =
+      matchesSearch(currentVideo.title, guessedTitle) ||
+      matchesSearch(guessedTitle, currentVideo.title) ||
+      normGuess === normTarget ||
+      (normGuess.length >= 4 && normTarget.includes(normGuess)) ||
+      (normTarget.length >= 4 && normGuess.includes(normTarget));
+
+    const currentDuration = ATTEMPT_DURATIONS[currentAttempt];
+
+    if (isCorrect) {
+      // Victory!
+      const newGuesses: GuessResult[] = [
+        ...guesses,
+        {
+          attemptIndex: currentAttempt,
+          type: 'success',
+          guessedTitle,
+          tierDuration: currentDuration,
+        },
+      ];
+      setGuesses(newGuesses);
+      setGameStatus('won');
+      setFeedbackMessage('🎉 Bravo ! C\'est la bonne vidéo !');
+    } else {
+      // Incorrect
+      const newGuesses: GuessResult[] = [
+        ...guesses,
+        {
+          attemptIndex: currentAttempt,
+          type: 'incorrect',
+          guessedTitle,
+          tierDuration: currentDuration,
+        },
+      ];
+      setGuesses(newGuesses);
+
+      if (currentAttempt + 1 >= 4) {
+        // Lost after 4 attempts
+        setGameStatus('lost');
+        setFeedbackMessage('Toutes tes chances sont épuisées !');
+      } else {
+        setCurrentAttempt((prev) => prev + 1);
+        const nextDuration = ATTEMPT_DURATIONS[currentAttempt + 1];
+        setFeedbackMessage(`Mauvaise réponse ! Palier ${nextDuration}s débloqué.`);
+        setTimeout(() => setFeedbackMessage(null), 3000);
+      }
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100">
+      <Header
+        onOpenRules={() => setIsRulesOpen(true)}
+        onNewGame={startNewGame}
+        totalVideos={CYPRIEN_VIDEOS.length}
+      />
+
+      <main className="flex-1 max-w-xl w-full mx-auto px-4 py-6 flex flex-col gap-5">
+        {/* Temporary Feedback Toast / Notification */}
+        {feedbackMessage && (
+          <div
+            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium border flex items-center justify-between shadow-lg transition-all animate-in fade-in slide-in-from-top-2 ${
+              gameStatus === 'won'
+                ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-200'
+                : 'bg-orange-950/80 border-orange-500/50 text-orange-200'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{feedbackMessage}</span>
+            </div>
+            <button
+              onClick={() => setFeedbackMessage(null)}
+              className="text-zinc-400 hover:text-zinc-200 text-xs font-mono ml-2"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Video Player (Visible 16:9 snippet player with freeze frame) */}
+        {currentVideo && (
+          <YouTubePlayer
+            ref={playerRef}
+            videoId={currentVideo.id}
+            startTime={startTime}
+            currentAttempt={currentAttempt}
+            gameStatus={gameStatus}
+            isPlaying={isPlaying}
+            setIsPlaying={setIsPlaying}
+            onTogglePlay={handleTogglePlay}
+            onReady={() => setPlayerReady(true)}
+            onProgressUpdate={(prog, elapsed) => {
+              setSnippetProgress(prog);
+              setSnippetElapsed(elapsed);
+            }}
+            onSnippetEnd={() => {
+              setIsPlaying(false);
+            }}
+          />
+        )}
+
+        {/* Timeline Progress Bar */}
+        <TimelineProgressBar
+          currentAttempt={currentAttempt}
+          currentSnippetProgress={snippetProgress}
+          currentElapsed={snippetElapsed}
+          isPlaying={isPlaying}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+
+        {/* Guess History (4 tiers) */}
+        <GuessHistory
+          guesses={guesses}
+          currentAttempt={currentAttempt}
+          gameStatus={gameStatus}
+        />
+
+        {/* In-Game Controls (Play, Skip, Guess Input) */}
+        {gameStatus !== 'won' && gameStatus !== 'lost' ? (
+          <div className="flex flex-col gap-4 mt-2">
+            <ActionControls
+              currentAttempt={currentAttempt}
+              gameStatus={gameStatus}
+              isPlaying={isPlaying}
+              onTogglePlay={handleTogglePlay}
+              onSkip={handleSkip}
+              disabled={!playerReady}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+            <GuessInput
+              catalog={CYPRIEN_VIDEOS}
+              onGuess={handleGuess}
+              disabled={!playerReady}
+              placeholder="Tape le nom d'une vidéo (ex: Technophobe, Les geeks...)"
+            />
+
+            <div className="flex items-center justify-between text-[11px] text-zinc-500 px-1 font-mono">
+              <span>Astuce : [Espace] pour Lancer / Pause</span>
+              <span>Micro-extraits calibrés</span>
+            </div>
+          </div>
+        ) : (
+          /* End Game Card (Victory / Defeat) */
+          currentVideo && (
+            <EndGameCard
+              video={currentVideo}
+              startTime={startTime}
+              gameStatus={gameStatus}
+              guesses={guesses}
+              onPlayAgain={startNewGame}
+              onPlayFullVideo={() => playerRef.current?.playFull()}
+            />
+          )
+        )}
       </main>
+
+      {/* Rules Modal */}
+      <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
+
+      {/* Footer */}
+      <footer className="w-full py-4 border-t border-zinc-900 text-center text-xs text-zinc-500">
+        <p>Nicolas Pichard</p>
+      </footer>
     </div>
   );
 }
