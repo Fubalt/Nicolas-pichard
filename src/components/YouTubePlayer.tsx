@@ -171,13 +171,6 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
           if (state === 1) {
             disableCaptions(playerRef.current);
 
-            // Verify the player has actually arrived near startTime before counting duration
-            const curTime = playerRef.current.getCurrentTime?.();
-            if (typeof curTime === 'number' && Math.abs(curTime - startTime) > 2.5) {
-              progressAnimFrameRef.current = requestAnimationFrame(checkProgress);
-              return;
-            }
-
             if (playbackStartTime === null) {
               playbackStartTime = performance.now();
             }
@@ -203,19 +196,17 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
 
       progressAnimFrameRef.current = requestAnimationFrame(checkProgress);
 
-      // Fallback safety timeout (with enough buffer for initial network buffering)
-      const safetyTimeoutMs = Math.max(3000, maxDuration * 1000 + 4000);
+      // Fallback safety timeout (tight cutoff to guarantee stop)
+      const safetyTimeoutMs = Math.ceil(maxDuration * 1000 + 350);
       timerRef.current = setTimeout(() => {
-        if (isCurrentlyPlayingRef.current) {
-          stopPlayback(false);
-          onProgressUpdate?.(1, maxDuration);
-          onSnippetEnd?.();
-        }
+        stopPlayback(false);
+        onProgressUpdate?.(1, maxDuration);
+        onSnippetEnd?.();
       }, safetyTimeoutMs);
     } catch (err) {
       console.error('Failed to play video snippet:', err);
     }
-  }, [playerReady, startTime, currentMaxDuration, setIsPlaying, onProgressUpdate, onSnippetEnd, stopPlayback, disableCaptions]);
+  }, [playerReady, startTime, currentMaxDuration, setIsPlaying, onProgressUpdate, onSnippetEnd, stopPlayback, disableCaptions, isMuted, volume]);
 
   // Play full video continuously when game ends
   const playFull = useCallback(() => {
@@ -252,8 +243,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
       if (progressAnimFrameRef.current) cancelAnimationFrame(progressAnimFrameRef.current);
 
       const actualFrom = hasEverPlayed ? fromDuration : 0;
-      const additionalDuration = Math.max(0.05, toDuration - actualFrom);
-      const targetStartTime = startTime + actualFrom;
+      const additionalDuration = Math.max(0.1, toDuration - actualFrom);
 
       setHasEverPlayed(true);
 
@@ -267,10 +257,9 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
           playerRef.current.setVolume?.(volume);
         }
 
-        // If player isn't already frozen near targetStartTime, seek to targetStartTime
-        const curTime = playerRef.current.getCurrentTime?.();
-        if (typeof curTime !== 'number' || Math.abs(curTime - targetStartTime) > 0.4) {
-          playerRef.current.seekTo(targetStartTime, true);
+        // If never played yet, seek to startTime; otherwise simply resume playing from current frozen frame
+        if (!hasEverPlayed) {
+          playerRef.current.seekTo(startTime, true);
         }
 
         playerRef.current.playVideo();
@@ -286,13 +275,6 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
             // State 1 = PLAYING
             if (state === 1) {
               disableCaptions(playerRef.current);
-
-              // Wait until player has arrived near targetStartTime if a seek was needed
-              const currentSec = playerRef.current.getCurrentTime?.();
-              if (typeof currentSec === 'number' && Math.abs(currentSec - targetStartTime) > 1.5) {
-                progressAnimFrameRef.current = requestAnimationFrame(checkProgress);
-                return;
-              }
 
               if (playbackStartTime === null) {
                 playbackStartTime = performance.now();
@@ -320,13 +302,12 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
 
         progressAnimFrameRef.current = requestAnimationFrame(checkProgress);
 
-        const safetyTimeoutMs = Math.max(3000, additionalDuration * 1000 + 4000);
+        // Safety timeout strictly based on additionalDuration + small margin
+        const safetyTimeoutMs = Math.ceil(additionalDuration * 1000 + 350);
         timerRef.current = setTimeout(() => {
-          if (isCurrentlyPlayingRef.current) {
-            stopPlayback(false);
-            onProgressUpdate?.(1, toDuration);
-            onSnippetEnd?.();
-          }
+          stopPlayback(false);
+          onProgressUpdate?.(1, toDuration);
+          onSnippetEnd?.();
         }, safetyTimeoutMs);
       } catch (err) {
         console.error('Failed to play continuation snippet:', err);
