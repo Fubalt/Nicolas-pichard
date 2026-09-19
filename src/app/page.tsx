@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { VideoItem, GameStatus, GuessResult, GameMode } from '@/types/game';
 import { CYPRIEN_ALL_VIDEOS, CYPRIEN_CLASSIC_VIDEOS, getRandomGameVideo } from '@/data/videos';
 import { ATTEMPT_DURATIONS } from '@/constants/game';
-import { normalizeTitle, matchesSearch, cleanDisplayTitle } from '@/lib/utils';
+import { normalizeTitle, matchesSearch } from '@/lib/utils';
 import { YouTubePlayer, YouTubePlayerRef } from '@/components/YouTubePlayer';
 import { TimelineProgressBar } from '@/components/TimelineProgressBar';
 import { GuessHistory } from '@/components/GuessHistory';
@@ -13,12 +13,26 @@ import { ActionControls } from '@/components/ActionControls';
 import { EndGameCard } from '@/components/EndGameCard';
 import { Header } from '@/components/Header';
 import { RulesModal } from '@/components/RulesModal';
-import { Music, Volume2, Sparkles, Trophy, History } from 'lucide-react';
+import { Sparkles, History, Gamepad2, Swords } from 'lucide-react';
+
+import { useMultiplayerRoom } from '@/hooks/useMultiplayerRoom';
+import { CreateJoinRoom } from '@/components/multiplayer/CreateJoinRoom';
+import { BattleLobby } from '@/components/multiplayer/BattleLobby';
+import { BattleHeader } from '@/components/multiplayer/BattleHeader';
+import { BattleRoundRecap } from '@/components/multiplayer/BattleRoundRecap';
+import { BattlePodium } from '@/components/multiplayer/BattlePodium';
 
 export default function Home() {
+  // Navigation Mode: Solo vs Battle
+  const [mainTab, setMainTab] = useState<'solo' | 'battle'>('solo');
+  const [initialRoomParam, setInitialRoomParam] = useState<string>('');
+
+  // Solo Mode State
   const [gameMode, setGameMode] = useState<GameMode>('all');
   const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(null);
   const [startTime, setStartTime] = useState<number>(10);
+
+  // Common In-Game State (Shared between Solo & Battle Round)
   const [currentAttempt, setCurrentAttempt] = useState<number>(0);
   const [gameStatus, setGameStatus] = useState<GameStatus>('ready');
   const [guesses, setGuesses] = useState<GuessResult[]>([]);
@@ -31,10 +45,26 @@ export default function Home() {
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
   const playerRef = useRef<YouTubePlayerRef>(null);
+  const battleRoundStartTimeRef = useRef<number>(0);
 
-  const currentCatalog = gameMode === 'classic' ? CYPRIEN_CLASSIC_VIDEOS : CYPRIEN_ALL_VIDEOS;
+  // Multiplayer Hook
+  const mp = useMultiplayerRoom();
 
-  const startNewGame = useCallback((targetMode?: GameMode) => {
+  const currentSoloCatalog = gameMode === 'classic' ? CYPRIEN_CLASSIC_VIDEOS : CYPRIEN_ALL_VIDEOS;
+
+  // Check URL query parameters for ?room=CODE
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const roomParam = params.get('room');
+      if (roomParam) {
+        setInitialRoomParam(roomParam);
+        setMainTab('battle');
+      }
+    }
+  }, []);
+
+  const startNewSoloGame = useCallback((targetMode?: GameMode) => {
     if (playerRef.current) {
       playerRef.current.pauseSnippet();
     }
@@ -50,7 +80,7 @@ export default function Home() {
     setSnippetElapsed(0);
   }, [gameMode]);
 
-  // Initialize game on mount and restore saved mode if any
+  // Initialize solo game on mount and restore saved mode if any
   useEffect(() => {
     let initialMode: GameMode = 'all';
     try {
@@ -60,16 +90,32 @@ export default function Home() {
         setGameMode(saved);
       }
     } catch (e) {}
-    startNewGame(initialMode);
+    startNewSoloGame(initialMode);
   }, []);
 
-  const handleSelectMode = (newMode: GameMode) => {
+  // When battle status enters 'playing', reset round player state
+  useEffect(() => {
+    if (mainTab === 'battle' && mp.status === 'playing' && mp.currentRound) {
+      battleRoundStartTimeRef.current = Date.now();
+      setCurrentAttempt(0);
+      setGameStatus('ready');
+      setGuesses([]);
+      setIsPlaying(false);
+      setSnippetProgress(0);
+      setSnippetElapsed(0);
+      if (playerRef.current) {
+        playerRef.current.pauseSnippet();
+      }
+    }
+  }, [mainTab, mp.status, mp.currentRoundIndex]);
+
+  const handleSelectSoloMode = (newMode: GameMode) => {
     if (newMode === gameMode) return;
     setGameMode(newMode);
     try {
       localStorage.setItem('nicolas_pichard_game_mode', newMode);
     } catch (e) {}
-    startNewGame(newMode);
+    startNewSoloGame(newMode);
   };
 
   const handleVolumeChange = (newVol: number) => {
@@ -87,6 +133,30 @@ export default function Home() {
       setIsMuted(false);
     } else {
       setIsMuted(true);
+    }
+  };
+
+  // Compute active video and catalog based on active mode
+  const activeVideo =
+    mainTab === 'battle' ? mp.currentRound?.video ?? null : currentVideo;
+  const activeStartTime =
+    mainTab === 'battle' ? mp.currentRound?.startTime ?? 10 : startTime;
+  const activeCatalog =
+    mainTab === 'battle'
+      ? mp.roomConfig?.mode === 'classic'
+        ? CYPRIEN_CLASSIC_VIDEOS
+        : CYPRIEN_ALL_VIDEOS
+      : currentSoloCatalog;
+
+  const handleTogglePlay = () => {
+    if (!playerRef.current || !activeVideo) return;
+    if (gameStatus === 'won' || gameStatus === 'lost') return;
+
+    if (isPlaying) {
+      playerRef.current.pauseSnippet();
+    } else {
+      setGameStatus('playing');
+      playerRef.current.playSnippet();
     }
   };
 
@@ -109,19 +179,7 @@ export default function Home() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, gameStatus, playerReady]);
-
-  const handleTogglePlay = () => {
-    if (!playerRef.current || !currentVideo) return;
-    if (gameStatus === 'won' || gameStatus === 'lost') return;
-
-    if (isPlaying) {
-      playerRef.current.pauseSnippet();
-    } else {
-      setGameStatus('playing');
-      playerRef.current.playSnippet();
-    }
-  };
+  }, [isPlaying, gameStatus, playerReady, activeVideo]);
 
   const handleSkip = () => {
     if (gameStatus === 'won' || gameStatus === 'lost') return;
@@ -143,6 +201,10 @@ export default function Home() {
     if (currentAttempt + 1 >= 4) {
       // Defeat
       setGameStatus('lost');
+      if (mainTab === 'battle') {
+        const elapsedSec = (Date.now() - battleRoundStartTimeRef.current) / 1000;
+        mp.finishCurrentRound(false, currentAttempt, elapsedSec);
+      }
     } else {
       const nextAttempt = currentAttempt + 1;
       const nextDuration = ATTEMPT_DURATIONS[nextAttempt];
@@ -154,17 +216,17 @@ export default function Home() {
   };
 
   const handleGuess = (guessedTitle: string) => {
-    if (!currentVideo || gameStatus === 'won' || gameStatus === 'lost') return;
+    if (!activeVideo || gameStatus === 'won' || gameStatus === 'lost') return;
     if (playerRef.current && isPlaying) {
       playerRef.current.pauseSnippet();
     }
 
     const normGuess = normalizeTitle(guessedTitle);
-    const normTarget = normalizeTitle(currentVideo.title);
+    const normTarget = normalizeTitle(activeVideo.title);
 
     const isCorrect =
-      matchesSearch(currentVideo.title, guessedTitle) ||
-      matchesSearch(guessedTitle, currentVideo.title) ||
+      matchesSearch(activeVideo.title, guessedTitle) ||
+      matchesSearch(guessedTitle, activeVideo.title) ||
       normGuess === normTarget ||
       (normGuess.length >= 4 && normTarget.includes(normGuess)) ||
       (normTarget.length >= 4 && normGuess.includes(normTarget));
@@ -184,6 +246,10 @@ export default function Home() {
       ];
       setGuesses(newGuesses);
       setGameStatus('won');
+      if (mainTab === 'battle') {
+        const elapsedSec = (Date.now() - battleRoundStartTimeRef.current) / 1000;
+        mp.finishCurrentRound(true, currentAttempt, elapsedSec);
+      }
     } else {
       // Incorrect
       const newGuesses: GuessResult[] = [
@@ -200,6 +266,10 @@ export default function Home() {
       if (currentAttempt + 1 >= 4) {
         // Lost after 4 attempts
         setGameStatus('lost');
+        if (mainTab === 'battle') {
+          const elapsedSec = (Date.now() - battleRoundStartTimeRef.current) / 1000;
+          mp.finishCurrentRound(false, currentAttempt, elapsedSec);
+        }
       } else {
         const nextAttempt = currentAttempt + 1;
         const nextDuration = ATTEMPT_DURATIONS[nextAttempt];
@@ -215,128 +285,326 @@ export default function Home() {
     <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100">
       <Header
         onOpenRules={() => setIsRulesOpen(true)}
-        onNewGame={() => startNewGame()}
-        totalVideos={currentCatalog.length}
+        onNewGame={() => (mainTab === 'solo' ? startNewSoloGame() : setMainTab('solo'))}
+        totalVideos={activeCatalog.length}
       />
 
-      <main className="flex-1 max-w-xl w-full mx-auto px-4 py-6 flex flex-col gap-5">
-        {/* Game Mode Selector */}
-        <div className="flex flex-col items-center gap-1.5 w-full">
-          <div className="bg-zinc-900/90 border border-zinc-800/90 p-1 rounded-2xl flex items-center gap-1 w-full shadow-lg backdrop-blur-md">
+      <main className="flex-1 max-w-xl w-full mx-auto px-4 py-4 flex flex-col gap-5">
+        {/* Top Mode Switcher: Solo vs Battle Multi */}
+        <div className="flex items-center justify-center w-full">
+          <div className="bg-zinc-900/90 border border-zinc-800/90 p-1 rounded-2xl flex items-center gap-1 w-full max-w-xs shadow-xl backdrop-blur-md">
             <button
               type="button"
-              onClick={() => handleSelectMode('all')}
-              className={`flex-1 py-2 px-2 sm:px-4 rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 text-xs font-bold transition-all select-none cursor-pointer ${
-                gameMode === 'all'
+              onClick={() => setMainTab('solo')}
+              className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+                mainTab === 'solo'
                   ? 'bg-zinc-800 text-white shadow-md border border-zinc-700/60'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
               }`}
             >
-              <Sparkles className={`w-3.5 h-3.5 ${gameMode === 'all' ? 'text-amber-400' : 'text-zinc-500'}`} />
-              <span>Toutes les époques ({CYPRIEN_ALL_VIDEOS.length})</span>
+              <Gamepad2 className="w-3.5 h-3.5 text-zinc-300" />
+              <span>Mode Solo</span>
             </button>
 
             <button
               type="button"
-              onClick={() => handleSelectMode('classic')}
-              className={`flex-1 py-2 px-2 sm:px-4 rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 text-xs font-bold transition-all select-none cursor-pointer ${
-                gameMode === 'classic'
-                  ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md shadow-orange-950/40 border border-orange-500/40'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+              onClick={() => setMainTab('battle')}
+              className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+                mainTab === 'battle'
+                  ? 'bg-gradient-to-r from-red-600 via-orange-500 to-amber-500 text-zinc-950 shadow-md font-black'
+                  : 'text-zinc-400 hover:text-orange-400 hover:bg-zinc-800/40'
               }`}
             >
-              <History className={`w-3.5 h-3.5 ${gameMode === 'classic' ? 'text-amber-200' : 'text-zinc-500'}`} />
-              <span>Classique ≤ 2016 ({CYPRIEN_CLASSIC_VIDEOS.length})</span>
+              <Swords
+                className={`w-3.5 h-3.5 ${
+                  mainTab === 'battle' ? 'text-zinc-950' : 'text-orange-400'
+                }`}
+              />
+              <span>Battle Multi ⚔️</span>
+              {mp.isInRoom && (
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              )}
             </button>
           </div>
-
-          <p className="text-[11px] text-zinc-500 font-medium text-center">
-            {gameMode === 'classic'
-              ? '📼 Époque culte : du « DESSIN » (déc. 2016) au « McDonald\'s » (2010)'
-              : '🌟 Catalogue complet : toutes les vidéos de 2010 à aujourd\'hui'}
-          </p>
         </div>
 
-        {/* Video Player (Visible 16:9 snippet player with freeze frame) */}
-        {currentVideo && (
-          <YouTubePlayer
-            ref={playerRef}
-            videoId={currentVideo.id}
-            startTime={startTime}
-            currentAttempt={currentAttempt}
-            gameStatus={gameStatus}
-            isPlaying={isPlaying}
-            setIsPlaying={setIsPlaying}
-            volume={volume}
-            isMuted={isMuted}
-            onTogglePlay={handleTogglePlay}
-            onReady={() => setPlayerReady(true)}
-            onProgressUpdate={(prog, elapsed) => {
-              setSnippetProgress(prog);
-              setSnippetElapsed(elapsed);
-            }}
-            onSnippetEnd={() => {
-              setIsPlaying(false);
-            }}
-          />
-        )}
+        {/* ----------------- SOLO MODE ----------------- */}
+        {mainTab === 'solo' && (
+          <>
+            {/* Game Mode Selector */}
+            <div className="flex flex-col items-center gap-1.5 w-full">
+              <div className="bg-zinc-900/90 border border-zinc-800/90 p-1 rounded-2xl flex items-center gap-1 w-full shadow-lg backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => handleSelectSoloMode('all')}
+                  className={`flex-1 py-2 px-2 sm:px-4 rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 text-xs font-bold transition-all select-none cursor-pointer ${
+                    gameMode === 'all'
+                      ? 'bg-zinc-800 text-white shadow-md border border-zinc-700/60'
+                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+                  }`}
+                >
+                  <Sparkles
+                    className={`w-3.5 h-3.5 ${
+                      gameMode === 'all' ? 'text-amber-400' : 'text-zinc-500'
+                    }`}
+                  />
+                  <span>Toutes les époques ({CYPRIEN_ALL_VIDEOS.length})</span>
+                </button>
 
-        {/* Timeline Progress Bar with External Volume Control */}
-        <TimelineProgressBar
-          currentAttempt={currentAttempt}
-          currentSnippetProgress={snippetProgress}
-          currentElapsed={snippetElapsed}
-          isPlaying={isPlaying}
-          volume={volume}
-          isMuted={isMuted}
-          onVolumeChange={handleVolumeChange}
-          onToggleMute={handleToggleMute}
-        />
+                <button
+                  type="button"
+                  onClick={() => handleSelectSoloMode('classic')}
+                  className={`flex-1 py-2 px-2 sm:px-4 rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 text-xs font-bold transition-all select-none cursor-pointer ${
+                    gameMode === 'classic'
+                      ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md shadow-orange-950/40 border border-orange-500/40'
+                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+                  }`}
+                >
+                  <History
+                    className={`w-3.5 h-3.5 ${
+                      gameMode === 'classic' ? 'text-amber-200' : 'text-zinc-500'
+                    }`}
+                  />
+                  <span>Classique ≤ 2016 ({CYPRIEN_CLASSIC_VIDEOS.length})</span>
+                </button>
+              </div>
 
-        {/* Guess History (4 tiers) */}
-        <GuessHistory
-          guesses={guesses}
-          currentAttempt={currentAttempt}
-          gameStatus={gameStatus}
-        />
+              <p className="text-[11px] text-zinc-500 font-medium text-center">
+                {gameMode === 'classic'
+                  ? "📼 Époque culte : du « DESSIN » (déc. 2016) au « McDonald's » (2010)"
+                  : "🌟 Catalogue complet : toutes les vidéos de 2010 à aujourd'hui"}
+              </p>
+            </div>
 
-        {/* In-Game Controls (Play, Skip, Guess Input) */}
-        {gameStatus !== 'won' && gameStatus !== 'lost' ? (
-          <div className="flex flex-col gap-4 mt-2">
-            <ActionControls
+            {/* Video Player */}
+            {activeVideo && (
+              <YouTubePlayer
+                key={`solo-${activeVideo.id}-${activeStartTime}`}
+                ref={playerRef}
+                videoId={activeVideo.id}
+                startTime={activeStartTime}
+                currentAttempt={currentAttempt}
+                gameStatus={gameStatus}
+                isPlaying={isPlaying}
+                setIsPlaying={setIsPlaying}
+                volume={volume}
+                isMuted={isMuted}
+                onTogglePlay={handleTogglePlay}
+                onReady={() => setPlayerReady(true)}
+                onProgressUpdate={(prog, elapsed) => {
+                  setSnippetProgress(prog);
+                  setSnippetElapsed(elapsed);
+                }}
+                onSnippetEnd={() => {
+                  setIsPlaying(false);
+                }}
+              />
+            )}
+
+            {/* Timeline Progress Bar */}
+            <TimelineProgressBar
+              currentAttempt={currentAttempt}
+              currentSnippetProgress={snippetProgress}
+              currentElapsed={snippetElapsed}
+              isPlaying={isPlaying}
+              volume={volume}
+              isMuted={isMuted}
+              onVolumeChange={handleVolumeChange}
+              onToggleMute={handleToggleMute}
+            />
+
+            {/* Guess History */}
+            <GuessHistory
+              guesses={guesses}
               currentAttempt={currentAttempt}
               gameStatus={gameStatus}
-              isPlaying={isPlaying}
-              onTogglePlay={handleTogglePlay}
-              onSkip={handleSkip}
-              disabled={!playerReady}
             />
 
-            <GuessInput
-              catalog={currentCatalog}
-              onGuess={handleGuess}
-              disabled={!playerReady}
-              placeholder="Tape le nom d'une vidéo (ex: Technophobe, Les geeks...)"
-            />
+            {/* In-Game Controls */}
+            {gameStatus !== 'won' && gameStatus !== 'lost' ? (
+              <div className="flex flex-col gap-4 mt-2">
+                <ActionControls
+                  currentAttempt={currentAttempt}
+                  gameStatus={gameStatus}
+                  isPlaying={isPlaying}
+                  onTogglePlay={handleTogglePlay}
+                  onSkip={handleSkip}
+                  disabled={!playerReady}
+                />
 
-            <div className="flex items-center justify-between text-[11px] text-zinc-500 px-1 font-mono">
-              <span>Astuce : [Espace] pour Lancer / Pause</span>
-              <span>Micro-extraits calibrés</span>
-            </div>
-          </div>
-        ) : (
-          /* End Game Card (Victory / Defeat) */
-          currentVideo && (
-            <EndGameCard
-              video={currentVideo}
-              startTime={startTime}
-              gameStatus={gameStatus}
-              guesses={guesses}
-              gameMode={gameMode}
-              onPlayAgain={() => startNewGame()}
-              onPlayFullVideo={() => playerRef.current?.playFull()}
-            />
-          )
+                <GuessInput
+                  catalog={activeCatalog}
+                  onGuess={handleGuess}
+                  disabled={!playerReady}
+                  placeholder="Tape le nom d'une vidéo (ex: Technophobe, Les geeks...)"
+                />
+
+                <div className="flex items-center justify-between text-[11px] text-zinc-500 px-1 font-mono">
+                  <span>Astuce : [Espace] pour Lancer / Pause</span>
+                  <span>Micro-extraits calibrés</span>
+                </div>
+              </div>
+            ) : (
+              /* End Game Card */
+              activeVideo && (
+                <EndGameCard
+                  video={activeVideo}
+                  startTime={activeStartTime}
+                  gameStatus={gameStatus}
+                  guesses={guesses}
+                  gameMode={gameMode}
+                  onPlayAgain={() => startNewSoloGame()}
+                  onPlayFullVideo={() => playerRef.current?.playFull()}
+                />
+              )
+            )}
+          </>
+        )}
+
+        {/* ----------------- MULTIPLAYER BATTLE MODE ----------------- */}
+        {mainTab === 'battle' && (
+          <>
+            {/* Step 1: Not in room -> Create or Join */}
+            {!mp.isInRoom && (
+              <CreateJoinRoom
+                initialRoomCode={initialRoomParam}
+                onCreateRoom={(pseudo, totalRounds, mode) => {
+                  mp.createRoom(pseudo, totalRounds, mode);
+                }}
+                onJoinRoom={(code, pseudo) => {
+                  mp.joinRoom(code, pseudo);
+                }}
+                onBackToSolo={() => setMainTab('solo')}
+              />
+            )}
+
+            {/* Step 2: In Room & Lobby */}
+            {mp.isInRoom && mp.roomConfig && mp.status === 'lobby' && (
+              <BattleLobby
+                roomConfig={mp.roomConfig}
+                players={mp.players}
+                myPlayerId={mp.myPlayerId}
+                isHost={mp.isHost}
+                onStartGame={mp.startGame}
+                onLeaveRoom={mp.leaveRoom}
+              />
+            )}
+
+            {/* Step 3: In Room & Playing a Round */}
+            {mp.isInRoom && mp.roomConfig && mp.status === 'playing' && mp.currentRound && (
+              <div className="flex flex-col gap-4">
+                <BattleHeader
+                  currentRoundIndex={mp.currentRoundIndex}
+                  totalRounds={mp.roomConfig.totalRounds}
+                  roomCode={mp.roomConfig.roomCode}
+                  players={mp.players}
+                  myPlayerId={mp.myPlayerId}
+                  onLeaveRoom={mp.leaveRoom}
+                />
+
+                {/* Video Player for this Battle Round */}
+                <YouTubePlayer
+                  key={`battle-${mp.currentRound.video.id}-${mp.currentRound.startTime}`}
+                  ref={playerRef}
+                  videoId={mp.currentRound.video.id}
+                  startTime={mp.currentRound.startTime}
+                  currentAttempt={currentAttempt}
+                  gameStatus={gameStatus}
+                  isPlaying={isPlaying}
+                  setIsPlaying={setIsPlaying}
+                  volume={volume}
+                  isMuted={isMuted}
+                  onTogglePlay={handleTogglePlay}
+                  onReady={() => setPlayerReady(true)}
+                  onProgressUpdate={(prog, elapsed) => {
+                    setSnippetProgress(prog);
+                    setSnippetElapsed(elapsed);
+                  }}
+                  onSnippetEnd={() => {
+                    setIsPlaying(false);
+                  }}
+                />
+
+                <TimelineProgressBar
+                  currentAttempt={currentAttempt}
+                  currentSnippetProgress={snippetProgress}
+                  currentElapsed={snippetElapsed}
+                  isPlaying={isPlaying}
+                  volume={volume}
+                  isMuted={isMuted}
+                  onVolumeChange={handleVolumeChange}
+                  onToggleMute={handleToggleMute}
+                />
+
+                <GuessHistory
+                  guesses={guesses}
+                  currentAttempt={currentAttempt}
+                  gameStatus={gameStatus}
+                />
+
+                <div className="flex flex-col gap-4 mt-2">
+                  <ActionControls
+                    currentAttempt={currentAttempt}
+                    gameStatus={gameStatus}
+                    isPlaying={isPlaying}
+                    onTogglePlay={handleTogglePlay}
+                    onSkip={handleSkip}
+                    disabled={!playerReady}
+                  />
+
+                  <GuessInput
+                    catalog={activeCatalog}
+                    onGuess={handleGuess}
+                    disabled={!playerReady}
+                    placeholder="Tape le nom d'une vidéo (ex: Technophobe, Les geeks...)"
+                  />
+
+                  <div className="flex items-center justify-between text-[11px] text-zinc-500 px-1 font-mono">
+                    <span>⚡ Trouve vite pour le bonus de vitesse !</span>
+                    <span>Même timecode pour tous</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Round Recap */}
+            {mp.isInRoom && mp.roomConfig && mp.status === 'round_recap' && mp.currentRound && (
+              <div className="flex flex-col gap-4">
+                <BattleHeader
+                  currentRoundIndex={mp.currentRoundIndex}
+                  totalRounds={mp.roomConfig.totalRounds}
+                  roomCode={mp.roomConfig.roomCode}
+                  players={mp.players}
+                  myPlayerId={mp.myPlayerId}
+                  onLeaveRoom={mp.leaveRoom}
+                />
+
+                <BattleRoundRecap
+                  roundIndex={mp.currentRoundIndex}
+                  totalRounds={mp.roomConfig.totalRounds}
+                  currentRound={mp.currentRound}
+                  players={mp.players}
+                  myPlayerId={mp.myPlayerId}
+                  isHost={mp.isHost}
+                  lastRoundResult={mp.lastRoundResult}
+                  onNextRound={mp.nextRound}
+                  onLeaveRoom={mp.leaveRoom}
+                />
+              </div>
+            )}
+
+            {/* Step 5: Final Podium */}
+            {mp.isInRoom && mp.roomConfig && mp.status === 'finished' && (
+              <BattlePodium
+                players={mp.players}
+                myPlayerId={mp.myPlayerId}
+                isHost={mp.isHost}
+                roomConfig={mp.roomConfig}
+                onReplay={mp.replayBattle}
+                onLeaveRoom={mp.leaveRoom}
+              />
+            )}
+          </>
         )}
       </main>
 
