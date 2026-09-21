@@ -33,8 +33,8 @@ export const GEEKS_TEST_MOMENTS: QuoteQuestion[] = [
     correctPunchline: "Je vooole.",
     options: [
       "Je vooole.",
-      "Je saute.",
       "T'as des super-pouvoirs !",
+      "Vas-y essaye, saute par la fenêtre !",
       "Regarde, je vole !"
     ]
   },
@@ -50,8 +50,8 @@ export const GEEKS_TEST_MOMENTS: QuoteQuestion[] = [
     correctPunchline: "NOOOOOOOOOON !",
     options: [
       "NOOOOOOOOOON !",
-      "STOOOOOOOOOP !",
       "C'est pas ça un geek !",
+      "Super informa-ticien !",
       "Mais n'importe quoi !"
     ]
   },
@@ -67,9 +67,9 @@ export const GEEKS_TEST_MOMENTS: QuoteQuestion[] = [
     correctPunchline: "Super informa-ticien",
     options: [
       "Super informa-ticien",
-      "Méga informa-ticien",
       "Le mec qui a des super-pouvoirs",
-      "L'informaticien de service"
+      "J'ai un trombone et une ficelle, tu peux me construire un hélicoptère ?",
+      "L'informaticien officiel de toute la famille"
     ]
   },
   {
@@ -84,9 +84,9 @@ export const GEEKS_TEST_MOMENTS: QuoteQuestion[] = [
     correctPunchline: "J'ai un trombone et une ficelle, tu peux me construire un hélicoptère ?",
     options: [
       "J'ai un trombone et une ficelle, tu peux me construire un hélicoptère ?",
-      "J'ai un trombone et un élastique, tu peux me construire un hélicoptère ?",
       "Tu peux me défragmenter mon PC ?",
-      "J'ai un cure-dent et un trombone, tu peux me fabriquer un avion ?"
+      "Tu me conseilles quoi d'acheter comme télévision ?",
+      "J'ai un bout de scotch et un trombone, tu me répares la navette spatiale ?"
     ]
   },
   {
@@ -101,8 +101,8 @@ export const GEEKS_TEST_MOMENTS: QuoteQuestion[] = [
     correctPunchline: "plutôt que de recevoir une chaîne de mails de tes parents.",
     options: [
       "plutôt que de recevoir une chaîne de mails de tes parents.",
-      "plutôt que de recevoir un message vocal de tes parents.",
       "plutôt que de voir tes parents sur Facebook.",
+      "plutôt que de devoir réparer le PC de toute ta famille.",
       "plutôt que d'ouvrir un mail transféré par tes parents."
     ]
   },
@@ -118,8 +118,8 @@ export const GEEKS_TEST_MOMENTS: QuoteQuestion[] = [
     correctPunchline: "...en tout cas c'est ce qu'on peut croire en regardant ton historique.",
     options: [
       "...en tout cas c'est ce qu'on peut croire en regardant ton historique.",
-      "...en tout cas c'est ce qu'on peut croire en regardant tes favoris.",
-      "...parce que tu passes déjà tout ton temps sur l'ordinateur.",
+      "...parce que tu passes déjà 18 heures par jour sur l'ordinateur.",
+      "...mais en fait tu sais juste pas comment supprimer tes favoris.",
       "...du moins c'est ce que montre l'historique de ton navigateur."
     ]
   },
@@ -135,8 +135,8 @@ export const GEEKS_TEST_MOMENTS: QuoteQuestion[] = [
     correctPunchline: "Il y a 2000 livres qui tiennent là-dedans.",
     options: [
       "Il y a 2000 livres qui tiennent là-dedans.",
-      "Il y a 5000 livres qui tiennent là-dedans.",
       "C'est quelqu'un avant tout de passionné qui achète ça.",
+      "Tu peux emmener toute ta bibliothèque dans les toilettes.",
       "Tu peux stocker 2000 bouquins là-dedans."
     ]
   },
@@ -152,8 +152,8 @@ export const GEEKS_TEST_MOMENTS: QuoteQuestion[] = [
     correctPunchline: "C'est quand t'es tranquillement devant ton ordinateur.",
     options: [
       "C'est quand t'es tranquillement devant ton ordinateur.",
-      "C'est quand t'es tranquillement devant ta console.",
       "C'est quand quelqu'un touche à ta souris d'ordinateur.",
+      "C'est quand quelqu'un te demande de débrancher la box internet.",
       "C'est quand t'es posé peinard sur ton PC."
     ]
   }

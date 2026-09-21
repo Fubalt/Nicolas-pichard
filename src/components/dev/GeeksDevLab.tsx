@@ -618,19 +618,19 @@ export function GeeksDevLab({
                             1. Vraie réplique
                           </span>
                         )}
-                        {!isCorrect && optIdx === 1 && (
+                        {!isCorrect && currentMoment.id === 'geeks_super_pouvoirs_voler' && optIdx === 1 && (
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                            2. 1 mot qui change
+                            2. 1 mot qui change (sais ➔ peux)
                           </span>
                         )}
-                        {!isCorrect && optIdx === 2 && (
+                        {!isCorrect && !(currentMoment.id === 'geeks_super_pouvoirs_voler' && optIdx === 1) && optIdx < 3 && (
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
-                            3. Même scène / vidéo
+                            {optIdx + 1}. Réplique culte du sketch
                           </span>
                         )}
                         {!isCorrect && optIdx === 3 && (
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40">
-                            4. Ressemblance stylistique
+                            4. Alternative comique
                           </span>
                         )}
                       </div>
