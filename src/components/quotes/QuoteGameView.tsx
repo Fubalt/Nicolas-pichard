@@ -15,6 +15,8 @@ import {
   CheckCircle2,
   XCircle,
   ListFilter,
+  Flame,
+  Zap,
 } from 'lucide-react';
 
 interface Props {
@@ -25,8 +27,6 @@ interface Props {
   onBackToBlindtest: () => void;
 }
 
-const TOTAL_QUESTIONS = 5;
-
 export function QuoteGameView({
   volume,
   isMuted,
@@ -34,23 +34,28 @@ export function QuoteGameView({
   onToggleMute,
   onBackToBlindtest,
 }: Props) {
+  const [totalQuestions, setTotalQuestions] = useState<number>(10);
   const [questions, setQuestions] = useState<QuoteQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [gameStatus, setGameStatus] = useState<QuoteGameStatus>('ready');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [answers, setAnswers] = useState<QuoteAnswerRecord[]>([]);
+  const [currentStreak, setCurrentStreak] = useState<number>(0);
+  const [maxStreak, setMaxStreak] = useState<number>(0);
 
   const playerRef = useRef<QuotePlayerRef>(null);
 
-  // Initialize 5 random questions
-  const initGame = useCallback(() => {
-    const qList = getRandomQuotes(TOTAL_QUESTIONS);
+  // Initialize game session
+  const initGame = useCallback((count = totalQuestions) => {
+    const qList = getRandomQuotes(count);
     setQuestions(qList);
     setCurrentIndex(0);
     setAnswers([]);
+    setCurrentStreak(0);
+    setMaxStreak(0);
     setSelectedOption(null);
     setGameStatus('ready');
-  }, []);
+  }, [totalQuestions]);
 
   useEffect(() => {
     initGame();
@@ -58,13 +63,13 @@ export function QuoteGameView({
 
   const currentQuestion: QuoteQuestion | undefined = questions[currentIndex];
 
-  // When pause point is reached (~3s clip ends), display QCM choices immediately
+  // Pause point reached (~3s clip ends)
   const handlePauseReached = useCallback(() => {
     setGameStatus('waiting_qcm');
   }, []);
 
   const handleRevealFinished = useCallback(() => {
-    // Video finished playing the reveal
+    // Reveal ended
   }, []);
 
   // Player clicks a choice in the QCM
@@ -76,11 +81,29 @@ export function QuoteGameView({
       setSelectedOption(option);
       setGameStatus('revealing');
 
+      // Streak & Combo Multiplier calculation
+      let newStreak = 0;
+      let multiplier = 1.0;
+      let points = 0;
+
+      if (isCorrect) {
+        newStreak = currentStreak + 1;
+        multiplier = newStreak >= 4 ? 2.0 : newStreak === 3 ? 1.5 : newStreak === 2 ? 1.2 : 1.0;
+        points = Math.round(1000 * multiplier);
+        setCurrentStreak(newStreak);
+        setMaxStreak((prev) => Math.max(prev, newStreak));
+      } else {
+        newStreak = 0;
+        multiplier = 1.0;
+        points = 0;
+        setCurrentStreak(0);
+      }
+
       const record: QuoteAnswerRecord = {
         question: currentQuestion,
         selectedOption: option,
         isCorrect,
-        pointsEarned: isCorrect ? 1000 : 0,
+        pointsEarned: points,
       };
 
       setAnswers((prev) => [...prev, record]);
@@ -88,7 +111,7 @@ export function QuoteGameView({
       // Play continuation to hear and see the exact punchline in video!
       playerRef.current?.revealPunchline();
     },
-    [gameStatus, currentQuestion]
+    [gameStatus, currentQuestion, currentStreak]
   );
 
   // Next question
@@ -107,6 +130,13 @@ export function QuoteGameView({
   const handleReplaySetup = useCallback(() => {
     playerRef.current?.replaySetup();
   }, []);
+
+  // Switch format (5 vs 10 questions)
+  const handleChangeFormat = (count: number) => {
+    if (count === totalQuestions) return;
+    setTotalQuestions(count);
+    initGame(count);
+  };
 
   // Global Keyboard Shortcuts (Space, 1-4, Enter)
   useEffect(() => {
@@ -152,7 +182,8 @@ export function QuoteGameView({
     return (
       <QuoteEndCard
         answers={answers}
-        onPlayAgain={initGame}
+        maxStreak={maxStreak}
+        onPlayAgain={() => initGame(totalQuestions)}
         onBackToBlindtest={onBackToBlindtest}
       />
     );
@@ -165,23 +196,71 @@ export function QuoteGameView({
 
   return (
     <div className="w-full flex flex-col gap-4 max-w-lg mx-auto">
-      {/* Top Header Card */}
-      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-4 shadow-xl backdrop-blur-md flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="px-3 py-1 rounded-xl bg-gradient-to-r from-orange-500/20 to-amber-500/20 border border-orange-500/40 text-orange-400 text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Réplique {currentIndex + 1} / {questions.length}</span>
-          </span>
-          <span className="text-xs text-zinc-400 font-medium truncate max-w-[140px] sm:max-w-[200px]">
-            {currentQuestion.videoTitle}
-          </span>
+      {/* Top Header Card: Level indicator, Session Format & Live Combo */}
+      <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-4 shadow-xl backdrop-blur-md flex flex-col gap-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 rounded-xl bg-gradient-to-r from-orange-500/20 to-amber-500/20 border border-orange-500/40 text-orange-400 text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Réplique {currentIndex + 1} / {questions.length}</span>
+            </span>
+
+            {/* Streak Combo Badge */}
+            {currentStreak >= 2 && (
+              <span className="px-2 py-0.5 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 text-[11px] font-black tracking-wide flex items-center gap-1 animate-pulse">
+                <Flame className="w-3.5 h-3.5 fill-red-500 text-red-500" />
+                <span>Combo x{currentStreak >= 4 ? '2.0' : currentStreak === 3 ? '1.5' : '1.2'}</span>
+              </span>
+            )}
+          </div>
+
+          {/* Live Score & Mode switcher */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center bg-zinc-950/80 p-0.5 rounded-lg border border-zinc-800 text-[10px] font-bold">
+              <button
+                type="button"
+                onClick={() => handleChangeFormat(5)}
+                className={`px-2 py-0.5 rounded ${totalQuestions === 5 ? 'bg-orange-500 text-zinc-950' : 'text-zinc-400 hover:text-white'}`}
+                title="Partie express de 5 répliques"
+              >
+                5
+              </button>
+              <button
+                type="button"
+                onClick={() => handleChangeFormat(10)}
+                className={`px-2 py-0.5 rounded ${totalQuestions === 10 ? 'bg-orange-500 text-zinc-950' : 'text-zinc-400 hover:text-white'}`}
+                title="Partie complète de 10 répliques"
+              >
+                10
+              </button>
+            </div>
+
+            <span className="text-sm font-mono font-black text-white">
+              {currentScore.toLocaleString('fr-FR')} pts
+            </span>
+          </div>
         </div>
 
-        {/* Live Score */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-mono font-black text-white">
-            {currentScore.toLocaleString('fr-FR')} pts
-          </span>
+        {/* Arcade Segmented Progress Track */}
+        <div className="flex items-center gap-1.5 w-full pt-1">
+          {questions.map((q, idx) => {
+            const recorded = answers[idx];
+            let pillClass = 'bg-zinc-800';
+
+            if (idx === currentIndex) {
+              pillClass = 'bg-orange-500 ring-2 ring-orange-500/40 animate-pulse';
+            } else if (recorded) {
+              pillClass = recorded.isCorrect ? 'bg-emerald-500' : 'bg-red-500';
+            }
+
+            return (
+              <div
+                key={q.id}
+                className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${pillClass}`}
+                title={`Question ${idx + 1}`}
+              />
+            );
+          })}
         </div>
       </div>
 
@@ -249,14 +328,18 @@ export function QuoteGameView({
 
       {/* Main Interactive QCM Area */}
       <div className="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-5 shadow-2xl backdrop-blur-md flex flex-col gap-4">
-        {/* Header */}
+        {/* Header with points & streak preview */}
         <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
           <span className="text-xs font-black uppercase tracking-wider text-orange-400 flex items-center gap-1.5">
             <ListFilter className="w-3.5 h-3.5" />
             <span>Complète la réplique exacte</span>
           </span>
-          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-            +1 000 pts
+
+          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 flex items-center gap-1">
+            <Zap className="w-3 h-3" />
+            <span>
+              +{currentStreak >= 3 ? '2 000' : currentStreak === 2 ? '1 500' : currentStreak === 1 ? '1 200' : '1 000'} pts
+            </span>
           </span>
         </div>
 
@@ -348,7 +431,9 @@ export function QuoteGameView({
                         C'est la bonne réplique !
                       </span>
                       <span className="text-[11px] text-emerald-300">
-                        La vidéo rejoue la phrase exacte à l'écran.
+                        {currentStreak >= 2
+                          ? `🔥 Série de ${currentStreak} d'affilée ! Bonus multiplicateur appliqué.`
+                          : 'La vidéo rejoue la phrase exacte à l\'écran.'}
                       </span>
                     </div>
                   </>

@@ -3,58 +3,69 @@
 import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { QuoteAnswerRecord } from '@/types/quotes';
-import { Trophy, Check, X, RotateCcw, Share2, ExternalLink, Gamepad2 } from 'lucide-react';
+import { Trophy, Check, X, RotateCcw, Share2, ExternalLink, Gamepad2, Flame } from 'lucide-react';
 
 interface Props {
   answers: QuoteAnswerRecord[];
+  maxStreak?: number;
   onPlayAgain: () => void;
   onBackToBlindtest: () => void;
 }
 
-export function QuoteEndCard({ answers, onPlayAgain, onBackToBlindtest }: Props) {
+export function QuoteEndCard({ answers, maxStreak = 0, onPlayAgain, onBackToBlindtest }: Props) {
   const [copied, setCopied] = useState(false);
 
   const totalScore = answers.reduce((acc, a) => acc + a.pointsEarned, 0);
   const correctCount = answers.filter((a) => a.isCorrect).length;
-  const maxPossible = answers.length * 1000;
+  const accuracy = answers.length > 0 ? Math.round((correctCount / answers.length) * 100) : 0;
 
-  // Rank title
+  // Rank title and tier based on accuracy and streak
+  let rankBadge = '🥉 Rang C';
   let rankTitle = 'Néophyte de la Cartouche 👶';
   let rankDesc = 'Encore un petit effort pour déjouer les pièges des répliques !';
   let rankColor = 'text-zinc-300';
   let rankBg = 'bg-zinc-800/80 border-zinc-700';
 
-  if (totalScore >= 5000) {
+  if (accuracy === 100) {
+    rankBadge = '🏆 RANG S+';
     rankTitle = 'Légende Cyprienologique Suprême 👑';
     rankDesc = 'Sans faute parfait ! Aucun piège n\'a réussi à te faire douter.';
     rankColor = 'text-amber-300';
-    rankBg = 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-amber-500/50 shadow-amber-500/20';
-  } else if (totalScore >= 4000) {
+    rankBg = 'bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 border-amber-500/50 shadow-amber-500/20';
+  } else if (accuracy >= 80) {
+    rankBadge = '🥇 Rang S';
     rankTitle = 'Vrai Ancien des Geeks 🎮';
     rankDesc = 'Impressionnant ! Tu connais les répliques cultes sur le bout des doigts.';
     rankColor = 'text-orange-400';
     rankBg = 'bg-orange-500/15 border-orange-500/40 shadow-orange-500/20';
-  } else if (totalScore >= 2000) {
+  } else if (accuracy >= 60) {
+    rankBadge = '🥈 Rang A';
     rankTitle = 'Fan Émérite de YouTube 📺';
     rankDesc = 'Bien joué ! Tu as évité la plupart des pièges subtils.';
     rankColor = 'text-amber-400';
     rankBg = 'bg-zinc-800/90 border-zinc-700';
+  } else if (accuracy >= 40) {
+    rankBadge = '🥉 Rang B';
+    rankTitle = 'Abonné du Dimanche 🍿';
+    rankDesc = 'Pas mal ! Quelques classiques encore flous mais l\'esprit est là.';
+    rankColor = 'text-zinc-300';
+    rankBg = 'bg-zinc-800/80 border-zinc-700';
   }
 
   useEffect(() => {
-    if (correctCount >= 3) {
+    if (accuracy >= 60) {
       confetti({
-        particleCount: 80,
-        spread: 70,
+        particleCount: 90,
+        spread: 75,
         origin: { y: 0.6 },
-        colors: ['#f97316', '#eab308', '#22c55e'],
+        colors: ['#f97316', '#eab308', '#22c55e', '#ef4444'],
       });
     }
-  }, [correctCount]);
+  }, [accuracy]);
 
   const handleShare = () => {
     const emojis = answers.map((a) => (a.isCorrect ? '🟩' : '🟥')).join('');
-    const text = `💬 Nicolas Pichard - Mode Complète la réplique !\nScore : ${totalScore.toLocaleString('fr-FR')} pts (${correctCount}/${answers.length})\nRang : ${rankTitle}\n${emojis}\n\nJoue gratuitement sur https://nicolas-pichard.vercel.app`;
+    const text = `💬 Nicolas Pichard - Mode Complète la réplique !\nScore : ${totalScore.toLocaleString('fr-FR')} pts (${correctCount}/${answers.length} • ${accuracy}%)\nRang : ${rankBadge} - ${rankTitle}\n${maxStreak >= 3 ? `🔥 Série max : ${maxStreak} d'affilée\n` : ''}${emojis}\n\nJoue gratuitement sur https://nicolas-pichard.vercel.app`;
 
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -73,19 +84,35 @@ export function QuoteEndCard({ answers, onPlayAgain, onBackToBlindtest }: Props)
             Partie Terminée !
           </h2>
           <p className="text-xs text-zinc-400">
-            Tu as trouvé <strong className="text-white">{correctCount} sur {answers.length}</strong> répliques cultes
+            Tu as trouvé <strong className="text-white">{correctCount} sur {answers.length}</strong> répliques cultes ({accuracy}%)
           </p>
         </div>
 
         {/* Score & Rank Card */}
         <div className={`p-4 rounded-2xl border flex flex-col items-center text-center gap-1.5 shadow-lg ${rankBg}`}>
-          <span className="text-[11px] uppercase tracking-widest text-zinc-400 font-bold">
-            Score Final
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] uppercase tracking-widest text-zinc-400 font-bold">
+              Score Final
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-zinc-950/80 border border-zinc-700/60 text-[10px] font-black text-amber-400 font-mono">
+              {rankBadge}
+            </span>
+          </div>
+
           <span className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-white">
-            {totalScore.toLocaleString('fr-FR')}{' '}
-            <span className="text-sm font-normal text-zinc-400">/ {maxPossible.toLocaleString('fr-FR')} pts</span>
+            {totalScore.toLocaleString('fr-FR')} pts
           </span>
+
+          {/* Stats strip: Accuracy & Max Streak */}
+          <div className="flex items-center gap-3 mt-1 text-xs font-semibold text-zinc-300">
+            <span>Précision : <strong className="text-white">{accuracy}%</strong></span>
+            {maxStreak >= 2 && (
+              <span className="flex items-center gap-1 text-orange-400">
+                <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500" />
+                <span>Série max : {maxStreak}</span>
+              </span>
+            )}
+          </div>
 
           <div className="mt-2 flex flex-col items-center gap-0.5">
             <span className={`text-base font-black tracking-wide ${rankColor}`}>
@@ -167,7 +194,7 @@ export function QuoteEndCard({ answers, onPlayAgain, onBackToBlindtest }: Props)
             className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-red-600 via-orange-500 to-amber-500 hover:from-red-500 hover:to-amber-400 text-zinc-950 font-black text-sm tracking-wide shadow-xl shadow-orange-950/40 transition-all cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
           >
             <RotateCcw className="w-4 h-4" />
-            <span>Rejouer 5 nouvelles répliques 🔄</span>
+            <span>Rejouer une nouvelle partie ({answers.length} répliques) 🔄</span>
           </button>
 
           <button
