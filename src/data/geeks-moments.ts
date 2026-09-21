@@ -50,9 +50,9 @@ export const GEEKS_TEST_MOMENTS: QuoteQuestion[] = [
     correctPunchline: "NOOOOOOOOOON !",
     options: [
       "NOOOOOOOOOON !",
-      "C'est pas ça un geek !",
-      "Super informa-ticien !",
-      "Mais n'importe quoi !"
+      "C'EST PAS ÇA UN GEEK !",
+      "SUPER INFORMA-TICIEN !",
+      "MAIS N'IMPORTE QUOI !"
     ]
   },
   {
