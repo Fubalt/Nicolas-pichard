@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { QuoteQuestion, QuoteGameStatus, QuoteAnswerRecord } from '@/types/quotes';
-import { getRandomQuotes, isQuoteMatch } from '@/data/quotes';
+import { getRandomQuotes } from '@/data/quotes';
 import { QuotePlayer, QuotePlayerRef } from './QuotePlayer';
 import { QuoteEndCard } from './QuoteEndCard';
 import {
@@ -14,11 +14,8 @@ import {
   RotateCcw,
   CheckCircle2,
   XCircle,
-  HelpCircle,
-  Keyboard,
   ListFilter,
-  Send,
-  AlertCircle,
+  Check,
 } from 'lucide-react';
 
 interface Props {
@@ -41,15 +38,10 @@ export function QuoteGameView({
   const [questions, setQuestions] = useState<QuoteQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [gameStatus, setGameStatus] = useState<QuoteGameStatus>('ready');
-
-  // Input states
-  const [manualText, setManualText] = useState<string>('');
-  const [manualAttemptFailed, setManualAttemptFailed] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [answers, setAnswers] = useState<QuoteAnswerRecord[]>([]);
 
   const playerRef = useRef<QuotePlayerRef>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   // Initialize 5 random questions
   const initGame = useCallback(() => {
@@ -57,8 +49,6 @@ export function QuoteGameView({
     setQuestions(qList);
     setCurrentIndex(0);
     setAnswers([]);
-    setManualText('');
-    setManualAttemptFailed(false);
     setSelectedOption(null);
     setGameStatus('ready');
   }, []);
@@ -69,71 +59,38 @@ export function QuoteGameView({
 
   const currentQuestion: QuoteQuestion | undefined = questions[currentIndex];
 
-  // When pause is reached (~3s clip ended), activate manual input mode
+  // When pause point is reached (~3s clip ends), display QCM choices immediately
   const handlePauseReached = useCallback(() => {
-    setGameStatus('waiting_manual');
-    setManualAttemptFailed(false);
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 100);
+    setGameStatus('waiting_qcm');
   }, []);
 
   const handleRevealFinished = useCallback(() => {
-    // Video finished playing the continuation
+    // Video finished playing the reveal
   }, []);
 
-  // Submit Manual Typing
-  const handleManualSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (gameStatus !== 'waiting_manual' || !currentQuestion || !manualText.trim()) return;
+  // Player clicks a choice in the QCM
+  const handleSelectOption = useCallback(
+    (option: string) => {
+      if (gameStatus !== 'waiting_qcm' || !currentQuestion) return;
 
-    const trimmed = manualText.trim();
-    const isCorrect = isQuoteMatch(trimmed, currentQuestion.correctPunchline);
+      const isCorrect = option === currentQuestion.correctPunchline;
+      setSelectedOption(option);
+      setGameStatus('revealing');
 
-    if (isCorrect) {
-      // Direct hit via manual input! 1 000 pts
       const record: QuoteAnswerRecord = {
         question: currentQuestion,
-        userText: trimmed,
-        isCorrect: true,
-        method: 'manual',
-        pointsEarned: 1000,
+        selectedOption: option,
+        isCorrect,
+        pointsEarned: isCorrect ? 1000 : 0,
       };
+
       setAnswers((prev) => [...prev, record]);
-      setGameStatus('revealing');
+
+      // Play continuation to hear and see the exact punchline in video!
       playerRef.current?.revealPunchline();
-    } else {
-      // Incorrect manual guess: switch to QCM fallback!
-      setManualAttemptFailed(true);
-      setGameStatus('waiting_qcm');
-    }
-  };
-
-  // Switch to QCM fallback manually
-  const handleSwitchToQcm = () => {
-    setGameStatus('waiting_qcm');
-  };
-
-  // Submit QCM Choice
-  const handleSelectOption = (option: string) => {
-    if (gameStatus !== 'waiting_qcm' || !currentQuestion) return;
-
-    const isCorrect = option === currentQuestion.correctPunchline;
-    setSelectedOption(option);
-    setGameStatus('revealing');
-
-    const record: QuoteAnswerRecord = {
-      question: currentQuestion,
-      userText: manualText.trim() || undefined,
-      selectedOption: option,
-      isCorrect,
-      method: isCorrect ? 'qcm' : 'failed',
-      pointsEarned: isCorrect ? 500 : 0,
-    };
-
-    setAnswers((prev) => [...prev, record]);
-    playerRef.current?.revealPunchline();
-  };
+    },
+    [gameStatus, currentQuestion]
+  );
 
   // Next question
   const handleNext = () => {
@@ -143,16 +100,29 @@ export function QuoteGameView({
     }
 
     setCurrentIndex((prev) => prev + 1);
-    setManualText('');
-    setManualAttemptFailed(false);
     setSelectedOption(null);
     setGameStatus('ready');
   };
 
-  // Replay the 3s setup snippet
+  // Replay 3s snippet
   const handleReplaySetup = () => {
     playerRef.current?.replaySetup();
   };
+
+  // Keyboard numbers 1, 2, 3, 4 to select options
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (gameStatus !== 'waiting_qcm' || !currentQuestion) return;
+
+      const keyIndex = parseInt(e.key, 10) - 1;
+      if (keyIndex >= 0 && keyIndex < currentQuestion.options.length) {
+        handleSelectOption(currentQuestion.options[keyIndex]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [gameStatus, currentQuestion, handleSelectOption]);
 
   if (gameStatus === 'finished') {
     return (
@@ -249,12 +219,13 @@ export function QuoteGameView({
         </div>
       </div>
 
-      {/* Main Interactive Box */}
+      {/* Main Interactive QCM Area */}
       <div className="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-5 shadow-2xl backdrop-blur-md flex flex-col gap-4">
         {/* The Exact Quote Setup from Subtitles */}
         <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] uppercase tracking-widest text-zinc-500 font-bold">
-            Complète la réplique exacte
+          <span className="text-[11px] uppercase tracking-widest text-zinc-500 font-bold flex items-center justify-between">
+            <span>Complète la réplique exacte</span>
+            <span className="text-orange-400 font-normal">Pas de limite de temps</span>
           </span>
           <p className="text-sm sm:text-base font-extrabold text-white italic bg-zinc-950/80 border border-zinc-800 rounded-2xl p-3.5 shadow-inner">
             « {currentQuestion.setupPhrase} <span className="text-orange-400">... »</span>
@@ -264,99 +235,85 @@ export function QuoteGameView({
           </span>
         </div>
 
-        {/* ---------------- STEP 1: MANUAL TYPING ---------------- */}
-        {gameStatus === 'waiting_manual' && (
-          <form onSubmit={handleManualSubmit} className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-zinc-300 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Keyboard className="w-3.5 h-3.5 text-orange-400" />
-                  <span>Écris la suite de la phrase :</span>
-                </span>
-                <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                  +1 000 pts si trouvé
-                </span>
-              </label>
+        {/* 4 Choices (Always Active QCM) */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+              <ListFilter className="w-3.5 h-3.5 text-orange-400" />
+              <span>Quelle est la suite exacte ?</span>
+            </span>
+            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+              +1 000 pts
+            </span>
+          </div>
 
-              <div className="relative flex items-center">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={manualText}
-                  onChange={(e) => setManualText(e.target.value)}
-                  placeholder="Tape la réplique au clavier..."
-                  className="w-full pl-4 pr-24 py-3 bg-zinc-950 border border-zinc-800 rounded-2xl text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/40 font-medium transition-all"
-                  autoComplete="off"
-                />
+          <div className="grid grid-cols-1 gap-2.5">
+            {currentQuestion.options.map((option, idx) => {
+              const letter = String.fromCharCode(65 + idx); // A, B, C, D
+              const isSelected = selectedOption === option;
+              const isCorrect = option === currentQuestion.correctPunchline;
 
+              let cardStyle =
+                'bg-zinc-950/80 border-zinc-800 text-zinc-200 hover:border-zinc-700 hover:bg-zinc-800/60';
+
+              if (gameStatus === 'revealing') {
+                if (isCorrect) {
+                  cardStyle =
+                    'bg-emerald-500/20 border-emerald-500/80 text-emerald-100 shadow-lg shadow-emerald-950/40 ring-2 ring-emerald-500/40';
+                } else if (isSelected && !isCorrect) {
+                  cardStyle =
+                    'bg-red-500/20 border-red-500/80 text-red-200 shadow-lg shadow-red-950/40';
+                } else {
+                  cardStyle = 'bg-zinc-950/40 border-zinc-900 text-zinc-600 opacity-60';
+                }
+              } else if (gameStatus !== 'waiting_qcm') {
+                cardStyle = 'bg-zinc-950/40 border-zinc-900 text-zinc-500 cursor-not-allowed';
+              }
+
+              return (
                 <button
-                  type="submit"
-                  disabled={!manualText.trim()}
-                  className="absolute right-1.5 px-3.5 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-zinc-950 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-orange-950/40"
+                  key={option}
+                  type="button"
+                  onClick={() => handleSelectOption(option)}
+                  disabled={gameStatus !== 'waiting_qcm'}
+                  className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all cursor-pointer ${cardStyle}`}
                 >
-                  <span>Valider</span>
-                  <Send className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-[11px] text-zinc-500">
-                Pas de limite de temps, prends ton temps !
-              </span>
-
-              <button
-                type="button"
-                onClick={handleSwitchToQcm}
-                className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 transition-colors cursor-pointer"
-              >
-                <HelpCircle className="w-3.5 h-3.5" />
-                <span>J'hésite, passer au QCM (+500 pts)</span>
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* ---------------- STEP 2: QCM FALLBACK (IF WRONG OR REQUESTED) ---------------- */}
-        {gameStatus === 'waiting_qcm' && (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                <ListFilter className="w-3.5 h-3.5 text-amber-400" />
-                {manualAttemptFailed
-                  ? 'Pas tout à fait ! Choisis parmi les 4 propositions :'
-                  : 'Choisis parmi les 4 propositions :'}
-              </span>
-
-              <span className="text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                +500 pts si trouvé
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2">
-              {currentQuestion.options.map((option, idx) => {
-                const letter = String.fromCharCode(65 + idx); // A, B, C, D
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => handleSelectOption(option)}
-                    className="p-3.5 rounded-2xl border bg-zinc-950/80 border-zinc-800 text-zinc-200 hover:border-zinc-700 hover:bg-zinc-800/70 text-left flex items-start gap-3 transition-all cursor-pointer"
+                  <div
+                    className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs shrink-0 mt-0.5 ${
+                      gameStatus === 'revealing' && isCorrect
+                        ? 'bg-emerald-500 text-zinc-950'
+                        : gameStatus === 'revealing' && isSelected && !isCorrect
+                        ? 'bg-red-500 text-white'
+                        : 'bg-zinc-800 text-zinc-300'
+                    }`}
                   >
-                    <span className="w-6 h-6 rounded-lg bg-zinc-800 text-zinc-300 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
-                      {letter}
-                    </span>
+                    {gameStatus === 'revealing' && isCorrect ? (
+                      <CheckCircle2 className="w-4 h-4" />
+                    ) : gameStatus === 'revealing' && isSelected && !isCorrect ? (
+                      <XCircle className="w-4 h-4" />
+                    ) : (
+                      letter
+                    )}
+                  </div>
+
+                  <div className="flex flex-col min-w-0 flex-1">
                     <span className="text-xs sm:text-sm font-semibold leading-snug">
                       {option}
                     </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+                  </div>
 
-        {/* ---------------- STEP 3: REVEALING IN VIDEO ---------------- */}
+                  {gameStatus === 'waiting_qcm' && (
+                    <span className="text-[10px] text-zinc-500 font-mono hidden sm:inline self-center">
+                      [{idx + 1}]
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Post-Answer Reveal Bar */}
         {gameStatus === 'revealing' && (
           <div className="flex flex-col gap-3 pt-2 border-t border-zinc-800">
             {/* Outcome banner */}
@@ -373,9 +330,7 @@ export function QuoteGameView({
                     <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
                     <div>
                       <span className="font-black text-sm block">
-                        {lastAnswer.method === 'manual'
-                          ? 'Bien joué ! Trouvé en saisie libre !'
-                          : 'Bien joué ! Trouvé avec le QCM !'}
+                        C'est la bonne réplique !
                       </span>
                       <span className="text-[11px] text-emerald-300">
                         La vidéo rejoue la phrase exacte à l'écran.
@@ -387,10 +342,10 @@ export function QuoteGameView({
                     <XCircle className="w-5 h-5 text-red-400 shrink-0" />
                     <div>
                       <span className="font-black text-sm block">
-                        Manqué ! 0 pt
+                        Piégé ! 0 pt
                       </span>
                       <span className="text-[11px] text-red-300">
-                        La vidéo rejoue la phrase exacte pour te montrer.
+                        La vidéo te montre la véritable réplique exacte.
                       </span>
                     </div>
                   </>

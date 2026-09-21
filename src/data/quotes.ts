@@ -2,6 +2,7 @@ import { QuoteQuestion } from '@/types/quotes';
 
 /**
  * 100% Exact subtitles directly extracted from Cyprien's official YouTube videos.
+ * For each quote, 3 subtle and deceptive variations are crafted to create genuine doubt.
  * Each setup clip is short (~3 seconds) before the cut.
  */
 export const CYPRIEN_QUOTES: QuoteQuestion[] = [
@@ -17,9 +18,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "On était ensemble au CP mais, t'étais déjà majeur !",
     options: [
       "On était ensemble au CP mais, t'étais déjà majeur !",
-      "On t'a donné rendez-vous sur les Champs-Élysées !",
-      "Tes vidéos on s'en tape, retourne à l'école !",
-      "T'as aucun talent et tu parles fort pour te faire remarquer !"
+      "On était ensemble au CP mais t'étais au fond de la classe !",
+      "On était ensemble au collège mais t'avais déjà 18 ans !",
+      "On était ensemble en maternelle mais t'avais déjà du poil au menton !"
     ]
   },
   {
@@ -34,9 +35,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "la seule scène que tu montes, c'est sur un bateau-mouche !",
     options: [
       "la seule scène que tu montes, c'est sur un bateau-mouche !",
-      "t'es officiellement le Magloire du rap Français !",
-      "ma mère m'a toujours interdit de taper sur les handicapés !",
-      "t'écris pas une ligne sans faire une faute d'orthographe !"
+      "la seule scène que tu fais, c'est au fond d'une péniche !",
+      "la seule scène que tu montes, c'est pour passer l'aspirateur !",
+      "le seul public que tu touches, c'est les pigeons de ton quartier !"
     ]
   },
   {
@@ -51,9 +52,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "On dit PODCAST.",
     options: [
       "On dit PODCAST.",
-      "Tu vas voir j'vais te montrer !",
-      "Retourne matter les dessins animés !",
-      "Laisse-moi deviner, tu cherches des amis ?"
+      "Ça se prononce PODCAST !",
+      "Apprends à parler, c'est un PODCAST !",
+      "Déjà, on dit PODCAST !"
     ]
   },
   {
@@ -68,9 +69,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "que t'es un geek.",
     options: [
       "que t'es un geek.",
-      "que tu t'y connais en nouvelles technologies.",
-      "que tu peux te la raconter sur Twitter.",
-      "que t'as le droit de porter ces lunettes."
+      "que t'es devenu un vrai geek.",
+      "que tu fais partie des geeks.",
+      "que t'as un côté geek."
     ]
   },
   {
@@ -85,9 +86,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "J'ai un trombone et une ficelle, tu peux me construire un hélicoptère ?",
     options: [
       "J'ai un trombone et une ficelle, tu peux me construire un hélicoptère ?",
-      "Tu peux m'installer un antivirus et me défragmenter mon PC ?",
-      "J'ai cliqué sur un bouton rouge et tout a disparu !",
-      "Mon écran est bleu et y'a de la fumée qui sort !"
+      "J'ai un trombone et un élastique, tu peux me réparer la fusée Ariane ?",
+      "J'ai une pile et un câble USB, tu peux me pirater la NASA ?",
+      "J'ai un bout de carton et du scotch, tu peux me fabriquer un avion de chasse ?"
     ]
   },
   {
@@ -102,9 +103,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "plutôt que de recevoir une chaîne de mails de tes parents.",
     options: [
       "plutôt que de recevoir une chaîne de mails de tes parents.",
-      "plutôt que de voir quelqu'un taper avec un seul doigt sur un clavier.",
-      "plutôt que d'attendre qu'une page se charge en 56k.",
-      "plutôt que d'expliquer comment fonctionne une souris d'ordinateur."
+      "plutôt que de devoir trier la boîte mail de tes parents.",
+      "plutôt que de regarder tes parents envoyer un mail avec un seul doigt.",
+      "plutôt que de recevoir un diaporama PowerPoint de ta tante."
     ]
   },
   {
@@ -119,9 +120,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "J'ai compris. T'es allergique à la technologie !",
     options: [
       "J'ai compris. T'es allergique à la technologie !",
-      "Attention, mon téléphone va encore me brûler la main !",
-      "Moi ça va, heureusement moi ça va.",
-      "T'arrêtes tes conneries un peu et tu me laisses jouer ?"
+      "C'est bon j'ai trouvé : ton corps rejette toute la technologie !",
+      "Cherche plus : t'es devenu allergique aux ondes et à l'électronique !",
+      "C'est officiel : t'es phobique de la technologie moderne !"
     ]
   },
   {
@@ -136,9 +137,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: '"Internet". Pas "L\'internet". Répétez après moi : "Internet".',
     options: [
       '"Internet". Pas "L\'internet". Répétez après moi : "Internet".',
-      'Juste "Facebook", c\'est plus net.',
-      'Oui, parce qu\'elle pense que "LOL" ça veut dire "Oui" sur Internet.',
-      'Goo...gle...point...com'
+      '"Internet", sans le "L" apostrophe, s\'il vous plaît !',
+      'On dit juste "Internet", arrêtez de dire "L\'internet" !',
+      'C\'est "Internet" tout court, pourquoi vous rajoutez toujours un article ?'
     ]
   },
   {
@@ -153,9 +154,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "Pour les mecs, écrire ELLE BAISE avec sa calculatrice.",
     options: [
       "Pour les mecs, écrire ELLE BAISE avec sa calculatrice.",
-      "Pour les mecs, dessiner des bonhommes bâtons dans la marge.",
-      "Pour les mecs, faire rebondir le stylo quatre couleurs.",
-      "Pour les mecs, pincer son doigt dans les anneaux du classeur."
+      "Pour les mecs, taper 713705 pour afficher un gros mot à l'envers.",
+      "Pour les mecs, écrire BEBE ou CASSE-TOI avec les chiffres.",
+      "Pour les mecs, essayer d'écrire des insultes en retournant l'écran."
     ]
   },
   {
@@ -170,9 +171,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "Alors là, la technique, c'est d'éviter tout contact visuel avec le professeur.",
     options: [
       "Alors là, la technique, c'est d'éviter tout contact visuel avec le professeur.",
-      "Tu fais semblant de chercher frénétiquement dans ta trousse.",
-      "Tout le monde baisse la tête et prie pour pas se faire appeler.",
-      "Et là comme par hasard, le prof dit : Cyprien !"
+      "La seule technique, c'est de fixer intensément sa trousse sans cligner des yeux.",
+      "Là tu baisses la tête et tu fais semblant d'écrire le truc le plus important de ta vie.",
+      "La règle d'or, c'est surtout de ne jamais croiser le regard du prof."
     ]
   },
   {
@@ -187,9 +188,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "QUELLE FAMILLE DE MERDE !",
     options: [
       "QUELLE FAMILLE DE MERDE !",
-      "MERDE, ON CHANTE PAS DANS UNE BANQUE !",
-      "Dans les pubs, les gens sont bizarres.",
-      "Je veux ces lunettes, c'est mes lunettes !"
+      "MAIS QUELLE BANDE DE CONS !",
+      "PUTAIN, QUELLE FAMILLE DE DÉBILES !",
+      "JE PEUX PLUS VOUS SUPPORTER DANS CETTE MAISON !"
     ]
   },
   {
@@ -204,9 +205,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "MERDE, ON CHANTE PAS DANS UNE BANQUE !",
     options: [
       "MERDE, ON CHANTE PAS DANS UNE BANQUE !",
-      "Votre dossier est zéro, là !",
-      "QUELLE FAMILLE DE MERDE !",
-      "Dans la vraie vie ça se passe jamais comme ça !"
+      "MAIS TA GUEULE, ON CHANTE PAS CHEZ LE BANQUIER !",
+      "ARRÊTE DE CHANTER, ON EST DANS UN ÉTABLISSEMENT BANCAIRE !",
+      "C'EST PAS UNE COMÉDIE MUSICALE, C'EST UN CRÉDIT IMMOBILIER !"
     ]
   },
   {
@@ -221,59 +222,12 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "Je préfère être débile que puceau !",
     options: [
       "Je préfère être débile que puceau !",
-      "À cause de toi on a perdu la cartouche !",
-      "Tu tapes fort quand même !",
-      "On a peut-être perdu une cartouche mais tu viens de retrouver un ami !"
+      "Je préfère être débile qu'avoir ta gueule !",
+      "Peut-être que je suis débile, mais au moins j'ai des potes !",
+      "Je préfère être con que passer ma vie tout seul !"
     ]
   }
 ];
-
-/**
- * Normalizes text for forgiving comparison:
- * lowercase, removes accents, strip punctuation, extra spaces.
- */
-export function normalizeText(str: string): string {
-  return (str || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // remove diacritics / accents
-    .replace(/[^\w\s]/g, ' ') // replace punctuation with spaces
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-/**
- * Verifies if user's manual input matches the authentic quote.
- * Flexible: exact match, substring inclusion, or major keyword overlap >= 60%.
- */
-export function isQuoteMatch(userGuess: string, targetPunchline: string): boolean {
-  const normUser = normalizeText(userGuess);
-  const normTarget = normalizeText(targetPunchline);
-
-  if (!normUser || !normTarget) return false;
-  if (normUser === normTarget) return true;
-  if (normTarget.includes(normUser) && normUser.length >= 5) return true;
-  if (normUser.includes(normTarget)) return true;
-
-  // Filter out tiny stop words
-  const stopWords = new Set(['le', 'la', 'les', 'un', 'une', 'des', 'de', 'du', 'en', 'et', 'a', 'au', 'ce', 'que', 'qui', 'sa', 'se', 'son', 'ta', 'te', 'ton', 'on', 'il', 'je', 'tu', 'c', 'd', 'l', 'm', 'n', 's', 't', 'y']);
-  const targetWords = normTarget.split(/\s+/).filter((w) => w.length >= 2 && !stopWords.has(w));
-  const userWords = normUser.split(/\s+/).filter((w) => w.length >= 2 && !stopWords.has(w));
-
-  if (targetWords.length === 0) {
-    return normUser.length >= 2 && normTarget.includes(normUser);
-  }
-
-  let matchCount = 0;
-  for (const tw of targetWords) {
-    if (userWords.some((uw) => uw === tw || (uw.length >= 4 && (tw.includes(uw) || uw.includes(tw))))) {
-      matchCount++;
-    }
-  }
-
-  const ratio = matchCount / targetWords.length;
-  return ratio >= 0.6; // At least 60% of significant words found
-}
 
 function shuffleArray<T>(arr: T[]): T[] {
   const copy = [...arr];
