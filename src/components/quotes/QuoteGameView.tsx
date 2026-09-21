@@ -284,10 +284,10 @@ export function QuoteGameView({
           type="button"
           onClick={handleReplaySetup}
           className="px-3.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold flex items-center gap-2 border border-zinc-700 transition-all cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98]"
-          title="Réécouter l'extrait de 3 secondes [Espace]"
+          title="Réécouter l'extrait [Espace]"
         >
           <RotateCcw className="w-3.5 h-3.5 text-orange-400" />
-          <span>Réécouter l'extrait (3s)</span>
+          <span>Réécouter l'extrait</span>
           <span className="text-[10px] text-zinc-400 font-mono ml-0.5 px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-700/60 hidden sm:inline">
             Espace
           </span>

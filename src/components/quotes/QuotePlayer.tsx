@@ -504,7 +504,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
             <Play className="w-8 h-8 fill-zinc-950 ml-1" />
           </div>
           <span className="text-sm font-bold text-white group-hover:text-orange-400 transition-colors">
-            Lancer l'extrait (3s)
+            Lancer l'extrait
           </span>
           <span className="text-xs text-zinc-400 font-mono">
             Cliquer ici ou appuyer sur [Espace]
