@@ -93,8 +93,59 @@ export function GuessInput({ catalog, onGuess, disabled, placeholder = 'Recherch
     setSelectedIndex(-1);
   };
 
+  // Scroll selected item into view when navigating with arrows
+  useEffect(() => {
+    if (selectedIndex >= 0 && listRef.current) {
+      const selectedEl = listRef.current.children[selectedIndex] as HTMLElement;
+      if (selectedEl) {
+        selectedEl.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [selectedIndex]);
+
   return (
     <div ref={containerRef} className="relative w-full">
+      {/* Autocomplete Dropdown - Positioned ABOVE the search bar */}
+      {isOpen && suggestions.length > 0 && !disabled && (
+        <ul
+          ref={listRef}
+          className="absolute left-0 right-0 bottom-full mb-2 bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 rounded-xl shadow-2xl overflow-hidden z-50 max-h-64 overflow-y-auto divide-y divide-zinc-800/60"
+        >
+          {suggestions.map((video, index) => {
+            const isSelected = index === selectedIndex;
+            const displayTitle = cleanDisplayTitle(video.title);
+
+            return (
+              <li
+                key={video.id}
+                onMouseEnter={() => setSelectedIndex(index)}
+                onClick={() => submitSelection(video.title)}
+                className={`px-3.5 py-2.5 flex items-center justify-between cursor-pointer text-sm transition-colors ${
+                  isSelected ? 'bg-orange-500/15 text-orange-200' : 'text-zinc-200 hover:bg-zinc-800/70'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Film className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-orange-400' : 'text-zinc-500'}`} />
+                  <span className="truncate font-medium">{displayTitle}</span>
+                </div>
+
+                {isSelected && (
+                  <span className="text-[11px] font-mono text-orange-400/80 shrink-0 ml-2">
+                    Entrée ↵
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {isOpen && query.trim() && suggestions.length === 0 && !disabled && (
+        <div className="absolute left-0 right-0 bottom-full mb-2 bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-center text-xs text-zinc-400 shadow-xl z-50">
+          Aucun titre correspondant dans le catalogue de Cyprien.
+        </div>
+      )}
+
       <div className="relative flex items-center">
         <div className="absolute left-3.5 text-zinc-500 pointer-events-none">
           <Search className="w-4 h-4" />
@@ -136,47 +187,6 @@ export function GuessInput({ catalog, onGuess, disabled, placeholder = 'Recherch
           <Send className="w-3 h-3" />
         </button>
       </div>
-
-      {/* Autocomplete Dropdown */}
-      {isOpen && suggestions.length > 0 && !disabled && (
-        <ul
-          ref={listRef}
-          className="absolute left-0 right-0 top-full mt-2 bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 rounded-xl shadow-2xl overflow-hidden z-50 max-h-64 overflow-y-auto divide-y divide-zinc-800/60"
-        >
-          {suggestions.map((video, index) => {
-            const isSelected = index === selectedIndex;
-            const displayTitle = cleanDisplayTitle(video.title);
-
-            return (
-              <li
-                key={video.id}
-                onMouseEnter={() => setSelectedIndex(index)}
-                onClick={() => submitSelection(video.title)}
-                className={`px-3.5 py-2.5 flex items-center justify-between cursor-pointer text-sm transition-colors ${
-                  isSelected ? 'bg-orange-500/15 text-orange-200' : 'text-zinc-200 hover:bg-zinc-800/70'
-                }`}
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Film className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-orange-400' : 'text-zinc-500'}`} />
-                  <span className="truncate font-medium">{displayTitle}</span>
-                </div>
-
-                {isSelected && (
-                  <span className="text-[11px] font-mono text-orange-400/80 shrink-0 ml-2">
-                    Entrée ↵
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      {isOpen && query.trim() && suggestions.length === 0 && !disabled && (
-        <div className="absolute left-0 right-0 top-full mt-2 bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-center text-xs text-zinc-400 shadow-xl z-50">
-          Aucun titre correspondant dans le catalogue de Cyprien.
-        </div>
-      )}
     </div>
   );
 }
