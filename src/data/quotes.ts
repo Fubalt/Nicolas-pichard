@@ -4,6 +4,10 @@ import { QuoteQuestion } from '@/types/quotes';
  * 100% Exact subtitles directly extracted from Cyprien's official YouTube videos.
  * Every video contains MULTIPLE distinct quote moments across its timeline (early, middle, late).
  * 
+ * Confusion Engine:
+ * For each question, options often include REAL phrases uttered elsewhere in that SAME video.
+ * This tests true mastery by creating delicious doubt between two authentic lines of the sketch!
+ * 
  * An anti-repetition engine guarantees:
  * - A single video never stays at the same timecode from game to game.
  * - Each game picks from different videos and varying timestamps.
@@ -24,9 +28,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "On était ensemble au CP mais, t'étais déjà majeur !",
     options: [
       "On était ensemble au CP mais, t'étais déjà majeur !",
+      "Tu viens d'avoir 30 ans !", // Vraie réplique de la même vidéo à 35s !
       "On était ensemble au CP mais t'étais au fond de la classe !",
-      "On était ensemble au collège mais t'avais déjà 18 ans !",
-      "On était ensemble en maternelle mais t'avais déjà du poil au menton !"
+      "On était ensemble au collège mais t'avais déjà 18 ans !"
     ]
   },
   {
@@ -41,9 +45,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "...On apprend tout sur toi rien que sur la Première Page !",
     options: [
       "...On apprend tout sur toi rien que sur la Première Page !",
+      "Insulter les gens pour exister je sais c'est tentant.", // Vraie réplique de la même vidéo à 32s !
       "...On trouve des photos de toi avec une perruque !",
-      "...Y a que des articles sur ta calvitie !",
-      "...Google te propose 'voulez-vous dire un vrai rappeur ?'"
+      "la seule scène que tu montes, c'est sur un bateau-mouche !" // Vraie réplique de la même vidéo à 53s !
     ]
   },
   {
@@ -58,8 +62,8 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "la seule scène que tu montes, c'est sur un bateau-mouche !",
     options: [
       "la seule scène que tu montes, c'est sur un bateau-mouche !",
+      "Retourne à l'école ! Tes vidéos on s'en tape !", // Vraie réplique de la même vidéo à 56s !
       "la seule scène que tu fais, c'est au fond d'une péniche !",
-      "la seule scène que tu montes, c'est pour passer l'aspirateur !",
       "le seul public que tu touches, c'est les pigeons de ton quartier !"
     ]
   },
@@ -75,8 +79,8 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "T'écris pas une ligne sans faire une faute, D'OR-TO-GRAPHE !",
     options: [
       "T'écris pas une ligne sans faire une faute, D'OR-TO-GRAPHE !",
+      "...On apprend tout sur toi rien que sur la Première Page !", // Vraie réplique de la même vidéo à 47s !
       "T'as même pas réussi à passer le brevet des collèges !",
-      "T'as besoin d'un traducteur pour écrire un tweet !",
       "Apprends le Bescherelle avant d'écrire des textes !"
     ]
   },
@@ -92,9 +96,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "On dit PODCAST.",
     options: [
       "On dit PODCAST.",
+      "Ah oui, au fait.", // Vraie réplique prononcée juste avant à 112s !
       "Ça se prononce PODCAST !",
-      "Apprends à parler, c'est un PODCAST !",
-      "Déjà, on dit PODCAST !"
+      "Apprends à parler, c'est un PODCAST !"
     ]
   },
 
@@ -113,9 +117,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "A ce moment là, j'ai tellement envie de prendre la brosse",
     options: [
       "A ce moment là, j'ai tellement envie de prendre la brosse",
+      "Alors là, la technique, c'est d'éviter tout contact visuel avec le professeur.", // Vraie réplique à 120s !
       "Je peux plus écouter le cours, je fixe que ça",
-      "J'ai envie de hurler et de monter sur l'estrade",
-      "Ça me stresse tellement que j'oublie mon nom"
+      "J'ai envie de hurler et de monter sur l'estrade"
     ]
   },
   {
@@ -130,9 +134,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "Alors là, la technique, c'est d'éviter tout contact visuel avec le professeur.",
     options: [
       "Alors là, la technique, c'est d'éviter tout contact visuel avec le professeur.",
+      "A ce moment là, j'ai tellement envie de prendre la brosse", // Vraie réplique à 93s !
       "La seule technique, c'est de fixer intensément sa trousse sans cligner des yeux.",
-      "Là tu baisses la tête et tu fais semblant d'écrire le truc le plus important de ta vie.",
-      "La règle d'or, c'est surtout de ne jamais croiser le regard du prof."
+      "Là tu baisses la tête et tu fais semblant d'écrire le truc le plus important de ta vie."
     ]
   },
   {
@@ -147,9 +151,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "Pour les mecs, écrire ELLE BAISE avec sa calculatrice.",
     options: [
       "Pour les mecs, écrire ELLE BAISE avec sa calculatrice.",
+      "Alors, du coup, j'efface avec l'effaceur mais j'ai les doigts qui puent après.", // Vraie réplique à 112s !
       "Pour les mecs, taper 713705 pour afficher un gros mot à l'envers.",
-      "Pour les mecs, écrire BEBE ou CASSE-TOI avec les chiffres.",
-      "Pour les mecs, essayer d'écrire des insultes en retournant l'écran."
+      "Pour les mecs, écrire BEBE ou CASSE-TOI avec les chiffres."
     ]
   },
 
@@ -168,9 +172,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "QUELLE FAMILLE DE MERDE !",
     options: [
       "QUELLE FAMILLE DE MERDE !",
+      "MERDE, ON CHANTE PAS DANS UNE BANQUE !", // Vraie réplique à 104s !
       "MAIS QUELLE BANDE DE CONS !",
-      "PUTAIN, QUELLE FAMILLE DE DÉBILES !",
-      "JE PEUX PLUS VOUS SUPPORTER DANS CETTE MAISON !"
+      "PUTAIN, QUELLE FAMILLE DE DÉBILES !"
     ]
   },
   {
@@ -185,9 +189,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "MERDE, ON CHANTE PAS DANS UNE BANQUE !",
     options: [
       "MERDE, ON CHANTE PAS DANS UNE BANQUE !",
+      "BARREZ-VOUS !", // Vraie réplique prononcée juste après à 107s !
       "MAIS TA GUEULE, ON CHANTE PAS CHEZ LE BANQUIER !",
-      "ARRÊTE DE CHANTER, ON EST DANS UN ÉTABLISSEMENT BANCAIRE !",
-      "C'EST PAS UNE COMÉDIE MUSICALE, C'EST UN CRÉDIT IMMOBILIER !"
+      "QUELLE FAMILLE DE MERDE !" // Vraie réplique à 45s !
     ]
   },
   {
@@ -202,9 +206,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "MAIS FERME LA !!!",
     options: [
       "MAIS FERME LA !!!",
+      "Ne chantez pas ! CITYA c'est d'la merde, ça marche pas du tout...", // Vraie réplique à 129s !
       "TA GUEULE AVEC TA CHANSON !",
-      "ARRÊTE DE GUEULER !",
-      "ON EN VEUT PAS DE TON APPART !"
+      "MERDE, ON CHANTE PAS DANS UNE BANQUE !" // Vraie réplique à 104s !
     ]
   },
   {
@@ -219,9 +223,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "Devant tout le monde ? On peut pas faire ça dans un bureau, comme d'habitude ? Euh...",
     options: [
       "Devant tout le monde ? On peut pas faire ça dans un bureau, comme d'habitude ? Euh...",
+      "Pourquoi tu filmes un arrosage automatique aussi ?", // Vraie réplique à 57s !
       "Y a tous mes voisins qui écoutent mes problèmes d'argent !",
-      "Vous voulez pas donner mon code de carte bleue aux passants aussi ?",
-      "C'est secret bancaire ou c'est open bar dans le quartier ?"
+      "Vous voulez pas donner mon code de carte bleue aux passants aussi ?"
     ]
   },
 
@@ -240,9 +244,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "Super informa-ticien",
     options: [
       "Super informa-ticien",
-      "Le dépanneur officiel de la famille",
-      "Un hacker des services secrets",
-      "L'ingénieur de la maison"
+      "T'as des super-pouvoirs.", // Vraie réplique à 109s !
+      "Euh, Cyprien tu peux m'installer un antivirus ?", // Vraie réplique à 73s !
+      "Le dépanneur officiel de la famille"
     ]
   },
   {
@@ -257,9 +261,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "J'ai un trombone et une ficelle, tu peux me construire un hélicoptère ?",
     options: [
       "J'ai un trombone et une ficelle, tu peux me construire un hélicoptère ?",
+      "Super informa-ticien", // Vraie réplique à 72s !
       "J'ai un trombone et un élastique, tu peux me réparer la fusée Ariane ?",
-      "J'ai une pile et un câble USB, tu peux me pirater la NASA ?",
-      "J'ai un bout de carton et du scotch, tu peux me fabriquer un avion de chasse ?"
+      "J'ai une pile et un câble USB, tu peux me pirater la NASA ?"
     ]
   },
   {
@@ -274,9 +278,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "plutôt que de recevoir une chaîne de mails de tes parents.",
     options: [
       "plutôt que de recevoir une chaîne de mails de tes parents.",
+      "J'ai un trombone et une ficelle, tu peux me construire un hélicoptère ?", // Vraie réplique à 80s !
       "plutôt que de devoir trier la boîte mail de tes parents.",
-      "plutôt que de regarder tes parents envoyer un mail avec un seul doigt.",
-      "plutôt que de recevoir un diaporama PowerPoint de ta tante."
+      "plutôt que de regarder tes parents envoyer un mail avec un seul doigt."
     ]
   },
 
@@ -295,9 +299,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: '"Internet". Pas "L\'internet". Répétez après moi : "Internet".',
     options: [
       '"Internet". Pas "L\'internet". Répétez après moi : "Internet".',
+      'Juste "Facebook", c\'est plus net.', // Vraie réplique à 33s !
       '"Internet", sans le "L" apostrophe, s\'il vous plaît !',
-      'On dit juste "Internet", arrêtez de dire "L\'internet" !',
-      'C\'est "Internet" tout court, pourquoi vous rajoutez toujours un article ?'
+      'On dit juste "Internet", arrêtez de dire "L\'internet" !'
     ]
   },
   {
@@ -312,9 +316,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: 'Juste "Facebook", c\'est plus net.',
     options: [
       'Juste "Facebook", c\'est plus net.',
+      '"Internet". Pas "L\'internet". Répétez après moi : "Internet".', // Vraie réplique à 26s !
       'Arrêtez avec le "Le", on dit juste "Facebook" !',
-      'Pas "Le Facebook", s\'il vous plaît, c\'est ridicule !',
-      'On dit juste "Facebook", personne dit "Le Facebook" !'
+      'Pas "Le Facebook", s\'il vous plaît, c\'est ridicule !'
     ]
   },
   {
@@ -329,9 +333,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: 'ça veut dire "Oui" sur Internet.',
     options: [
       'ça veut dire "Oui" sur Internet.',
+      'Enfin bon bref, c\'est irrécupérable, on ne peut plus rien pour elle.', // Vraie réplique prononcée à 103s !
       'ça veut dire "Bisous" sur Internet.',
-      'ça veut dire "D\'accord mon chéri".',
-      'c\'est une abréviation pour dire "Je t\'aime".'
+      'ça veut dire "D\'accord mon chéri".'
     ]
   },
   {
@@ -346,8 +350,8 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "Oui pas de problème.",
     options: [
       "Oui pas de problème.",
+      "Juste \"Facebook\", c'est plus net.", // Vraie réplique à 33s !
       "Encore ?! Mais tu prends jamais l'avion !",
-      "Attends, t'as encore touché à tout !",
       "Donne, je te l'enlève en deux secondes."
     ]
   },
@@ -367,8 +371,8 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "Il est vraiment puceau ton frère ?",
     options: [
       "Il est vraiment puceau ton frère ?",
+      "Je préfère être débile que puceau !", // Vraie réplique mythique à 969s !
       "Et ils font quoi déguisés en plombiers ?",
-      "Sympa l'ambiance chez vous !",
       "Dis donc, elle a l'air gentille ta soeur !"
     ]
   },
@@ -384,9 +388,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "Je préfère être débile que puceau !",
     options: [
       "Je préfère être débile que puceau !",
-      "Je préfère être débile qu'avoir ta gueule !",
-      "Peut-être que je suis débile, mais au moins j'ai des potes !",
-      "Je préfère être con que passer ma vie tout seul !"
+      "Il est vraiment puceau ton frère ?", // Vraie réplique à 487s !
+      "T'es trop con ! À cause de toi on a perdu la cartouche !", // Vraie réplique à 961s !
+      "Je préfère être débile qu'avoir ta gueule !"
     ]
   },
   {
@@ -401,9 +405,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "Dans Wii Sports.",
     options: [
       "Dans Wii Sports.",
+      "Je préfère être débile que puceau !", // Vraie réplique à 969s !
       "À la salle du quartier.",
-      "Sur Punch-Out.",
-      "Depuis tout petit avec mon frère."
+      "Sur Punch-Out."
     ]
   },
   {
@@ -418,8 +422,8 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "T'as fait quoi ?",
     options: [
       "T'as fait quoi ?",
+      "C'est moins que le salaire minimum Flo...", // Vraie réplique prononcée juste après à 1164s !
       "Mais t'es complètement taré !",
-      "Attends, c'est une blague ?",
       "Et t'es content de toi ?!"
     ]
   },
@@ -439,8 +443,8 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "Vous ne verrez plus votre salaire alors.",
     options: [
       "Vous ne verrez plus votre salaire alors.",
+      "Je peux plus aller sur mon téléphone Yann.", // Vraie réplique de la vidéo à 369s !
       "Dans ce cas vous prenez la porte monsieur.",
-      "Alors vous ferez vos réunions par pigeon voyageur.",
       "Et comment je vous paye à la fin du mois ?"
     ]
   },
@@ -456,9 +460,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "Je peux plus aller sur mon téléphone Yann.",
     options: [
       "Je peux plus aller sur mon téléphone Yann.",
+      "Vous ne verrez plus votre salaire alors.", // Vraie réplique à 336s !
       "Mon téléphone a explosé dans ma poche.",
-      "J'ai jeté mon smartphone à la poubelle.",
-      "Les ondes me brûlent les mains !"
+      "J'ai jeté mon smartphone à la poubelle."
     ]
   },
 
@@ -477,8 +481,8 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "Ouais, elle m’inquiète.",
     options: [
       "Ouais, elle m’inquiète.",
+      "C'est parti pour une année de harcèlement scolaire.", // Vraie réplique à 289s !
       "Je sais plus quoi faire d'elle.",
-      "C'est la pub qui lui monte à la tête.",
       "Elle a pris ça de sa mère."
     ]
   },
@@ -494,9 +498,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "C'est un avion en papier.",
     options: [
       "C'est un avion en papier.",
-      "C'est tout ce qui me reste de mon enfance.",
-      "C'est une relique de famille !",
-      "T'as aucun respect pour les souvenirs."
+      "Non, c'est un déchet !", // Vraie réplique prononcée juste après à 519s !
+      "Ouais, elle m’inquiète.", // Vraie réplique à 260s !
+      "C'est tout ce qui me reste de mon enfance."
     ]
   },
 
@@ -515,9 +519,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "et ensuite j'ai un mono-sourcil.",
     options: [
       "et ensuite j'ai un mono-sourcil.",
-      "et ensuite j'ai une coupe de cheveux désastreuse.",
-      "et ensuite mon bouton d'acné se voit à dix kilomètres.",
-      "et ensuite ma voix vient de muer en direct."
+      "et ensuite j'ai eu une panne.", // Vraie réplique de la même vidéo à 415s !
+      "et ensuite elle voulait coucher avec moi.", // Vraie réplique de la même vidéo à 353s !
+      "et ensuite j'ai une coupe de cheveux désastreuse."
     ]
   },
   {
@@ -532,9 +536,9 @@ export const CYPRIEN_QUOTES: QuoteQuestion[] = [
     correctPunchline: "Non putain, t’es trop con...",
     options: [
       "Non putain, t’es trop con...",
+      "Mais c'est incroyable !", // Vraie réplique prononcée juste avant à 496s !
       "Mais t'as vendu mon Dracaufeu holographique ?!",
-      "Pourquoi t'as fait ça ? C'était notre trésor !",
-      "Je te déteste, tu gâches mon futur !"
+      "Pourquoi t'as fait ça ? C'était notre trésor !"
     ]
   }
 ];
