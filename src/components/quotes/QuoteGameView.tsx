@@ -221,32 +221,19 @@ export function QuoteGameView({
 
       {/* Main Interactive QCM Area */}
       <div className="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-5 shadow-2xl backdrop-blur-md flex flex-col gap-4">
-        {/* The Exact Quote Setup from Subtitles */}
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] uppercase tracking-widest text-zinc-500 font-bold flex items-center justify-between">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
+          <span className="text-xs font-black uppercase tracking-wider text-orange-400 flex items-center gap-1.5">
+            <ListFilter className="w-3.5 h-3.5" />
             <span>Complète la réplique exacte</span>
-            <span className="text-orange-400 font-normal">Pas de limite de temps</span>
           </span>
-          <p className="text-sm sm:text-base font-extrabold text-white italic bg-zinc-950/80 border border-zinc-800 rounded-2xl p-3.5 shadow-inner">
-            « {currentQuestion.setupPhrase} <span className="text-orange-400">... »</span>
-          </p>
-          <span className="text-[11px] text-zinc-500">
-            {currentQuestion.contextDescription}
+          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+            +1 000 pts
           </span>
         </div>
 
         {/* 4 Choices (Always Active QCM) */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
-              <ListFilter className="w-3.5 h-3.5 text-orange-400" />
-              <span>Quelle est la suite exacte ?</span>
-            </span>
-            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-              +1 000 pts
-            </span>
-          </div>
-
+        <div className="flex flex-col gap-2.5">
           <div className="grid grid-cols-1 gap-2.5">
             {currentQuestion.options.map((option, idx) => {
               const letter = String.fromCharCode(65 + idx); // A, B, C, D
