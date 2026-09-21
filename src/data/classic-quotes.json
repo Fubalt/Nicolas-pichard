@@ -646,6 +646,23 @@
     ]
   },
   {
+    "id": "bhK4UkmzAVA_9",
+    "videoId": "bhK4UkmzAVA",
+    "videoTitle": "CYPRIEN - LE DESSIN",
+    "contextDescription": "Quand ton pote découvre que tu sais dessiner en 2 secondes.",
+    "startTime": 181.8,
+    "pauseTime": 184.85,
+    "resumeDuration": 3.4,
+    "setupPhrase": "Et... voilà ! - Nan ! Moi j'viens juste de...",
+    "correctPunchline": "OH PUTAIN LA CHANCE !",
+    "options": [
+      "OH PUTAIN LA CHANCE !",
+      "- STEU - PUTAIN !",
+      "- CYPRIEN TU FILES DANS TA CHAMBRE !",
+      "JE SUIS TELLEMENT CHANCEUX !"
+    ]
+  },
+  {
     "id": "1xTa_2WhU4w_1",
     "videoId": "1xTa_2WhU4w",
     "videoTitle": "CYPRIEN - LES PUBS vs LA VIE 2",
