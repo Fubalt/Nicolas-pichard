@@ -612,6 +612,28 @@ export function GeeksDevLab({
                       {optIdx + 1}
                     </span>
                     <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1 mb-1">
+                        {isCorrect && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                            1. Vraie réplique
+                          </span>
+                        )}
+                        {!isCorrect && optIdx === 1 && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                            2. Même vidéo
+                          </span>
+                        )}
+                        {!isCorrect && optIdx === 2 && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                            3. 1 mot qui change
+                          </span>
+                        )}
+                        {!isCorrect && optIdx === 3 && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40">
+                            4. Ressemblance
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs font-semibold leading-snug">{opt}</p>
                       {isSelected && (
                         <div className="mt-1 flex items-center gap-1 text-[11px] font-bold">
@@ -623,7 +645,7 @@ export function GeeksDevLab({
                           ) : (
                             <>
                               <XCircle className="w-3.5 h-3.5 text-red-400" />
-                              <span className="text-red-400">Piège (Vraie réplique de la vidéo !)</span>
+                              <span className="text-red-400">Piège sélectionné</span>
                             </>
                           )}
                         </div>

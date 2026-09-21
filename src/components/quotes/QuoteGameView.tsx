@@ -55,7 +55,13 @@ export function QuoteGameView({
   const initGame = useCallback((count = totalQuestions) => {
     let qList: QuoteQuestion[];
     if (customQuestions && customQuestions.length > 0) {
-      qList = [...customQuestions].sort(() => 0.5 - Math.random()).slice(0, count);
+      qList = [...customQuestions]
+        .sort(() => 0.5 - Math.random())
+        .slice(0, count)
+        .map((q) => ({
+          ...q,
+          options: [...q.options].sort(() => 0.5 - Math.random()),
+        }));
     } else {
       qList = getRandomQuotes(count);
     }
