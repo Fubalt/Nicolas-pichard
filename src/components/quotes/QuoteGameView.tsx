@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   XCircle,
   ListFilter,
-  Check,
 } from 'lucide-react';
 
 interface Props {
@@ -71,7 +70,7 @@ export function QuoteGameView({
   // Player clicks a choice in the QCM
   const handleSelectOption = useCallback(
     (option: string) => {
-      if (gameStatus !== 'waiting_qcm' || !currentQuestion) return;
+      if (gameStatus === 'revealing' || gameStatus === 'finished' || !currentQuestion) return;
 
       const isCorrect = option === currentQuestion.correctPunchline;
       setSelectedOption(option);
@@ -93,7 +92,7 @@ export function QuoteGameView({
   );
 
   // Next question
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (currentIndex + 1 >= questions.length) {
       setGameStatus('finished');
       return;
@@ -102,27 +101,52 @@ export function QuoteGameView({
     setCurrentIndex((prev) => prev + 1);
     setSelectedOption(null);
     setGameStatus('ready');
-  };
+  }, [currentIndex, questions.length]);
 
   // Replay 3s snippet
-  const handleReplaySetup = () => {
+  const handleReplaySetup = useCallback(() => {
     playerRef.current?.replaySetup();
-  };
+  }, []);
 
-  // Keyboard numbers 1, 2, 3, 4 to select options
+  // Global Keyboard Shortcuts (Space, 1-4, Enter)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (gameStatus !== 'waiting_qcm' || !currentQuestion) return;
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
 
-      const keyIndex = parseInt(e.key, 10) - 1;
-      if (keyIndex >= 0 && keyIndex < currentQuestion.options.length) {
-        handleSelectOption(currentQuestion.options[keyIndex]);
+      // Spacebar toggles play/pause or replays
+      if (e.code === 'Space') {
+        e.preventDefault();
+        playerRef.current?.togglePlay();
+        return;
+      }
+
+      // Enter key moves to next question when in revealing phase
+      if (e.code === 'Enter') {
+        if (gameStatus === 'revealing') {
+          e.preventDefault();
+          handleNext();
+          return;
+        }
+      }
+
+      // Numbers 1, 2, 3, 4 select options when waiting for answer
+      if (gameStatus === 'waiting_qcm' && currentQuestion) {
+        const keyIndex = parseInt(e.key, 10) - 1;
+        if (keyIndex >= 0 && keyIndex < currentQuestion.options.length) {
+          e.preventDefault();
+          handleSelectOption(currentQuestion.options[keyIndex]);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameStatus, currentQuestion, handleSelectOption]);
+  }, [gameStatus, currentQuestion, handleSelectOption, handleNext]);
 
   if (gameStatus === 'finished') {
     return (
@@ -180,10 +204,14 @@ export function QuoteGameView({
         <button
           type="button"
           onClick={handleReplaySetup}
-          className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold flex items-center gap-1.5 border border-zinc-700 transition-all cursor-pointer"
+          className="px-3.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold flex items-center gap-2 border border-zinc-700 transition-all cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98]"
+          title="Réécouter l'extrait de 3 secondes [Espace]"
         >
           <RotateCcw className="w-3.5 h-3.5 text-orange-400" />
           <span>Réécouter l'extrait (3s)</span>
+          <span className="text-[10px] text-zinc-400 font-mono ml-0.5 px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-700/60 hidden sm:inline">
+            Espace
+          </span>
         </button>
 
         {/* Volume Slider */}
