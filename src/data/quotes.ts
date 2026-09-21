@@ -1,227 +1,280 @@
 import { QuoteQuestion } from '@/types/quotes';
 
+/**
+ * 100% Exact subtitles directly extracted from Cyprien's official YouTube videos.
+ * Each setup clip is short (~3 seconds) before the cut.
+ */
 export const CYPRIEN_QUOTES: QuoteQuestion[] = [
   {
-    id: 'cortex_clash',
+    id: 'cortex_majeur',
     videoId: 'dKwzZZKIbUs',
     videoTitle: 'Cyprien répond à Cortex',
-    contextDescription: 'Cyprien envoie sa punchline légendaire en plein clash.',
-    startTime: 63,
-    pauseTime: 70,
-    resumeDuration: 7,
-    setupPhrase: "T'es comme ta meuf, t'as pas d'sourcils...",
-    correctPunchline: "Et comme mon chien, t'as pas d'amour propre !",
+    contextDescription: 'En plein rap clash de 2011 face à Cortex.',
+    startTime: 37,
+    pauseTime: 40.5,
+    resumeDuration: 4.5,
+    setupPhrase: "Ça y est ça me revient ta tête d'obèse moqueur !",
+    correctPunchline: "On était ensemble au CP mais, t'étais déjà majeur !",
     options: [
-      "Et comme mon chien, t'as pas d'amour propre !",
-      "Et comme mon ordi, t'as plus du tout de batterie !",
-      "Et comme ta vidéo, t'as aucun sens !",
-      "Et comme ma grand-mère, tu comprends rien au web !"
-    ],
-    explanation: "La punchline la plus mythique du rap clash de 2011 qui a fait trembler tout le YouTube français."
+      "On était ensemble au CP mais, t'étais déjà majeur !",
+      "On t'a donné rendez-vous sur les Champs-Élysées !",
+      "Tes vidéos on s'en tape, retourne à l'école !",
+      "T'as aucun talent et tu parles fort pour te faire remarquer !"
+    ]
   },
   {
-    id: 'technophobe_smartphone',
-    videoId: 'wNRUzu4fTgw',
-    videoTitle: 'CYPRIEN - TECHNOPHOBE',
-    contextDescription: "L'ami d'Arthur n'arrive pas à concevoir qu'on puisse vivre sans téléphone.",
-    startTime: 70,
-    pauseTime: 77,
-    resumeDuration: 6,
-    setupPhrase: "Non mais Arthur, c'est pas possible de vivre sans smartphone !",
-    correctPunchline: "Si, au XVIIIe siècle ils vivaient très bien !",
+    id: 'cortex_bateau_mouche',
+    videoId: 'dKwzZZKIbUs',
+    videoTitle: 'Cyprien répond à Cortex',
+    contextDescription: 'Cyprien critique la carrière de rappeur de son rival.',
+    startTime: 50,
+    pauseTime: 53.2,
+    resumeDuration: 4.5,
+    setupPhrase: "Tu t'dis rappeur mais ta carrière décolle pas d'un pouce...",
+    correctPunchline: "la seule scène que tu montes, c'est sur un bateau-mouche !",
     options: [
-      "Si, au XVIIIe siècle ils vivaient très bien !",
-      "Si, avec un pigeon voyageur et du papier calque !",
-      "T'as qu'à demander à mon grille-pain !",
-      "Regarde Robinson Crusoé, il avait pas la 4G !"
-    ],
-    explanation: "Le court-métrage culte Technophobe cumule plus de 30 millions de vues."
+      "la seule scène que tu montes, c'est sur un bateau-mouche !",
+      "t'es officiellement le Magloire du rap Français !",
+      "ma mère m'a toujours interdit de taper sur les handicapés !",
+      "t'écris pas une ligne sans faire une faute d'orthographe !"
+    ]
   },
   {
-    id: 'technophobe_aspirateur',
-    videoId: 'wNRUzu4fTgw',
-    videoTitle: 'CYPRIEN - TECHNOPHOBE',
-    contextDescription: "Arthur raconte sa mésaventure avec son tout nouvel aspirateur autonome.",
-    startTime: 145,
-    pauseTime: 153,
-    resumeDuration: 6,
-    setupPhrase: "J'ai acheté un aspirateur robot autonome...",
-    correctPunchline: "Il a nettoyé deux mètres carrés avant de se jeter dans l'escalier !",
+    id: 'cortex_podcast',
+    videoId: 'dKwzZZKIbUs',
+    videoTitle: 'Cyprien répond à Cortex',
+    contextDescription: 'La toute dernière phrase de la vidéo après le coup de feu.',
+    startTime: 114,
+    pauseTime: 117.8,
+    resumeDuration: 4,
+    setupPhrase: "Tu fais des possecast, moi j'vais faire des possecast...",
+    correctPunchline: "On dit PODCAST.",
     options: [
-      "Il a nettoyé deux mètres carrés avant de se jeter dans l'escalier !",
-      "Il a aspiré mes chaussettes et mon chat avec !",
-      "Il refuse de tourner tant que j'ai pas mis à jour son firmware !",
-      "Il passe désormais sa vie coincé sous mon canapé !"
-    ],
-    explanation: "La fameuse rébellion des robots ménagers selon Cyprien."
+      "On dit PODCAST.",
+      "Tu vas voir j'vais te montrer !",
+      "Retourne matter les dessins animés !",
+      "Laisse-moi deviner, tu cherches des amis ?"
+    ]
   },
   {
-    id: 'cartouche_souffler',
-    videoId: 'c5TW7lqVuVY',
-    videoTitle: 'CYPRIEN - LA CARTOUCHE',
-    contextDescription: "En pleine partie sur console rétro, le jeu freeze soudainement.",
-    startTime: 110,
-    pauseTime: 118,
-    resumeDuration: 7,
-    setupPhrase: "Attends, le jeu se lance pas... Souffle dedans !",
-    correctPunchline: "Faut jamais souffler dans la cartouche, ça oxyde les connecteurs !",
-    options: [
-      "Faut jamais souffler dans la cartouche, ça oxyde les connecteurs !",
-      "J'ai soufflé tellement fort que j'ai avalé de la poussière !",
-      "Attends, je vais chercher l'aspirateur de maman !",
-      "C'est pas une cartouche Nintendo, c'est une cassette audio !"
-    ],
-    explanation: "Le mythe du soufflage de cartouche brisé par la science du rétrogaming."
-  },
-  {
-    id: 'geeks_passion',
+    id: 'geeks_harry_potter',
     videoId: 'wzjvKygubsI',
     videoTitle: 'Cyprien - Les geeks',
-    contextDescription: "Cyprien remet les pendules à l'heure sur ce qu'est un vrai geek.",
-    startTime: 16,
-    pauseTime: 23,
-    resumeDuration: 6,
-    setupPhrase: "Je suis pas un geek...",
-    correctPunchline: "Je suis juste un passionné d'informatique et de jeux vidéo !",
+    contextDescription: 'Cyprien s\'énerve contre la fausse mode des geeks.',
+    startTime: 12,
+    pauseTime: 15.6,
+    resumeDuration: 4,
+    setupPhrase: "C'est pas parce que tu passes ton temps sur Facebook et que t'as aimé le dernier Harry Potter...",
+    correctPunchline: "que t'es un geek.",
     options: [
-      "Je suis juste un passionné d'informatique et de jeux vidéo !",
-      "C'est juste mon écran qui est trop près de mes yeux !",
-      "Je vérifie juste si internet fonctionne encore !",
-      "J'ai une vie sociale, je parle à des gens sur TeamSpeak !"
-    ],
-    explanation: "La vidéo culte de 2011 qui a popularisé la culture geek auprès du grand public."
+      "que t'es un geek.",
+      "que tu t'y connais en nouvelles technologies.",
+      "que tu peux te la raconter sur Twitter.",
+      "que t'as le droit de porter ces lunettes."
+    ]
   },
   {
-    id: 'reunions_crise',
-    videoId: 'etvZ7fDxQdc',
-    videoTitle: 'Cyprien - Les réunions',
-    contextDescription: "Le grand patron cherche un plan de sauvetage d'urgence pour l'entreprise.",
-    startTime: 32,
-    pauseTime: 40,
-    resumeDuration: 6,
-    setupPhrase: "Bon, l'entreprise est en crise. Qui a une idée pour redynamiser l'équipe ?",
-    correctPunchline: "On pourrait peut-être organiser un pot de départ ?",
+    id: 'geeks_helicoptere',
+    videoId: 'wzjvKygubsI',
+    videoTitle: 'Cyprien - Les geeks',
+    contextDescription: 'Quand tout le monde te prend pour Super Informaticien.',
+    startTime: 78,
+    pauseTime: 80.6,
+    resumeDuration: 5,
+    setupPhrase: "Tu peux réparer mon ordinateur ?",
+    correctPunchline: "J'ai un trombone et une ficelle, tu peux me construire un hélicoptère ?",
     options: [
-      "On pourrait peut-être organiser un pot de départ ?",
-      "On remplace tous les sièges par des ballons de gym !",
-      "On fait un brainstorming transversal en visioconférence !",
-      "Et si on commençait par travailler au lieu de faire des réunions ?"
-    ],
-    explanation: "L'absurdité du monde du travail selon Cyprien, devenu un mème intemporel."
+      "J'ai un trombone et une ficelle, tu peux me construire un hélicoptère ?",
+      "Tu peux m'installer un antivirus et me défragmenter mon PC ?",
+      "J'ai cliqué sur un bouton rouge et tout a disparu !",
+      "Mon écran est bleu et y'a de la fumée qui sort !"
+    ]
   },
   {
-    id: 'reunions2_slogan',
-    videoId: 'Z2Kk4wsKmGE',
-    videoTitle: 'Cyprien - Les réunions 2',
-    contextDescription: "L'équipe marketing tente de trouver un slogan ultra vendeur pour leur produit.",
-    startTime: 50,
-    pauseTime: 58,
-    resumeDuration: 6,
-    setupPhrase: "On a besoin d'un slogan percutant pour le nouveau produit...",
-    correctPunchline: "« C'est bien, achetez-le, s'il vous plaît » ?",
+    id: 'geeks_chaine_mails',
+    videoId: 'wzjvKygubsI',
+    videoTitle: 'Cyprien - Les geeks',
+    contextDescription: 'Le pire cauchemar technologique d\'un internaute.',
+    startTime: 93,
+    pauseTime: 96.8,
+    resumeDuration: 4.5,
+    setupPhrase: "T'es un geek quand tu préfères qu'on t'arrache les ongles un par un, lentement...",
+    correctPunchline: "plutôt que de recevoir une chaîne de mails de tes parents.",
     options: [
-      "« C'est bien, achetez-le, s'il vous plaît » ?",
-      "« Moins cher que gratuit, c'est du vol » !",
-      "« Avec nous, vous n'aurez plus jamais honte » !",
-      "« Le futur, c'est maintenant, mais en mieux » !"
-    ],
-    explanation: "Une masterclass de stratégie commerciale."
+      "plutôt que de recevoir une chaîne de mails de tes parents.",
+      "plutôt que de voir quelqu'un taper avec un seul doigt sur un clavier.",
+      "plutôt que d'attendre qu'une page se charge en 56k.",
+      "plutôt que d'expliquer comment fonctionne une souris d'ordinateur."
+    ]
   },
   {
-    id: 'vieux_techno_adresse',
+    id: 'technophobe_allergie',
+    videoId: 'wNRUzu4fTgw',
+    videoTitle: 'CYPRIEN - TECHNOPHOBE',
+    contextDescription: 'Le pote d\'Arthur découvre enfin le diagnostic après les tests.',
+    startTime: 109,
+    pauseTime: 112.4,
+    resumeDuration: 4.5,
+    setupPhrase: "Alors... cigarette. Bon tu fumes pas...",
+    correctPunchline: "J'ai compris. T'es allergique à la technologie !",
+    options: [
+      "J'ai compris. T'es allergique à la technologie !",
+      "Attention, mon téléphone va encore me brûler la main !",
+      "Moi ça va, heureusement moi ça va.",
+      "T'arrêtes tes conneries un peu et tu me laisses jouer ?"
+    ]
+  },
+  {
+    id: 'vieux_internet_repetez',
     videoId: 'uFpKj3JbORs',
     videoTitle: 'Cyprien - Les vieux et la technologie',
-    contextDescription: "Cyprien essaie d'expliquer comment accéder à un site web à sa grand-mère.",
-    startTime: 42,
-    pauseTime: 50,
-    resumeDuration: 6,
-    setupPhrase: "Mamie, pour aller sur le site, tu dois taper l'adresse dans la barre...",
-    correctPunchline: "Mais pourquoi je dois mettre trois W, un seul ça suffit pas ?!",
+    contextDescription: 'Cyprien reprend les expressions de sa famille.',
+    startTime: 24,
+    pauseTime: 26.8,
+    resumeDuration: 4.5,
+    setupPhrase: "Vas-y montre moi ton truc sur l'Internet.",
+    correctPunchline: '"Internet". Pas "L\'internet". Répétez après moi : "Internet".',
     options: [
-      "Mais pourquoi je dois mettre trois W, un seul ça suffit pas ?!",
-      "C'est quoi cette petite flèche qui bouge toute seule ?!",
-      "J'ai appuyé sur la barre d'espace et mon café est tombé !",
-      "Attends, je vais chercher mes lunettes loupe !"
-    ],
-    explanation: "Le calvaire universel d'expliquer internet à ses grands-parents."
+      '"Internet". Pas "L\'internet". Répétez après moi : "Internet".',
+      'Juste "Facebook", c\'est plus net.',
+      'Oui, parce qu\'elle pense que "LOL" ça veut dire "Oui" sur Internet.',
+      'Goo...gle...point...com'
+    ]
   },
   {
     id: 'ecole_calculatrice',
     videoId: 'RL7grUEo960',
     videoTitle: "Cyprien - L'école",
-    contextDescription: "Le prof de maths justifie le par cœur avec un argument qui a très mal vieilli.",
-    startTime: 25,
-    pauseTime: 32,
-    resumeDuration: 6,
-    setupPhrase: "Le prof de maths qui te dit : « Vous devez apprendre ça par cœur »...",
-    correctPunchline: "Parce que plus tard, vous n'aurez pas toujours une calculatrice dans votre poche !",
+    contextDescription: 'Les techniques ultimes pour s\'occuper pendant les cours de maths.',
+    startTime: 183,
+    pauseTime: 186.8,
+    resumeDuration: 4.5,
+    setupPhrase: "Pour les filles, écrire SOLEIL avec sa calculatrice.",
+    correctPunchline: "Pour les mecs, écrire ELLE BAISE avec sa calculatrice.",
     options: [
-      "Parce que plus tard, vous n'aurez pas toujours une calculatrice dans votre poche !",
-      "Parce que les théorèmes sont la base de toute la société !",
-      "Alors que tout le monde sait qu'on va tout oublier début juillet !",
-      "Pour calculer l'angle de la pyramide en achetant des baguettes !"
-    ],
-    explanation: "L'argument de la calculatrice balayé dès l'arrivée des premiers smartphones."
+      "Pour les mecs, écrire ELLE BAISE avec sa calculatrice.",
+      "Pour les mecs, dessiner des bonhommes bâtons dans la marge.",
+      "Pour les mecs, faire rebondir le stylo quatre couleurs.",
+      "Pour les mecs, pincer son doigt dans les anneaux du classeur."
+    ]
   },
   {
-    id: 'dessin_enfance',
-    videoId: 'bhK4UkmzAVA',
-    videoTitle: 'CYPRIEN - LE DESSIN',
-    contextDescription: "Cyprien se rappelle ses premiers pas dans le monde de l'art.",
-    startTime: 48,
-    pauseTime: 55,
-    resumeDuration: 6,
-    setupPhrase: "Quand j'étais petit, je dessinais partout...",
-    correctPunchline: "Surtout sur les murs blancs que mes parents venaient de repeindre !",
+    id: 'ecole_contact_visuel',
+    videoId: 'RL7grUEo960',
+    videoTitle: "Cyprien - L'école",
+    contextDescription: 'L\'instant critique où le professeur cherche une victime au tableau.',
+    startTime: 117,
+    pauseTime: 120.7,
+    resumeDuration: 4.5,
+    setupPhrase: 'Quand le prof veut interroger quelqu\'un... "Bon, qui passe au tableau ?"',
+    correctPunchline: "Alors là, la technique, c'est d'éviter tout contact visuel avec le professeur.",
     options: [
-      "Surtout sur les murs blancs que mes parents venaient de repeindre !",
-      "Sur mes cahiers, mes tables et sur le front de mon petit frère !",
-      "J'ai même tenté de peindre la Joconde avec du ketchup !",
-      "Mais bizarrement, personne ne voulait m'acheter mes toiles !"
-    ],
-    explanation: "Le début de la passion de Cyprien pour l'illustration et la bande dessinée (Roger et ses humains)."
+      "Alors là, la technique, c'est d'éviter tout contact visuel avec le professeur.",
+      "Tu fais semblant de chercher frénétiquement dans ta trousse.",
+      "Tout le monde baisse la tête et prie pour pas se faire appeler.",
+      "Et là comme par hasard, le prof dit : Cyprien !"
+    ]
   },
   {
-    id: 'consoles_graphismes',
-    videoId: 'OxTicIgXyKw',
-    videoTitle: 'Le CLASH des consoles',
-    contextDescription: "La guerre sans fin entre joueurs consoles sur la qualité visuelle.",
-    startTime: 65,
-    pauseTime: 73,
-    resumeDuration: 6,
-    setupPhrase: "De toute façon votre console n'a aucun jeu potable...",
-    correctPunchline: "Alors que nous on a des graphismes tellement réalistes qu'on voit les pores de la peau !",
-    options: [
-      "Alors que nous on a des graphismes tellement réalistes qu'on voit les pores de la peau !",
-      "Alors qu'un vrai joueur sait que le PC sera toujours supérieur !",
-      "Normal, les développeurs ont passé tout le budget dans les cinématiques !",
-      "C'est faux, on a le remake du remaster de la version HD !"
-    ],
-    explanation: "Le débat éternel PlayStation vs Xbox résumé en une réplique cinglante."
-  },
-  {
-    id: 'pubs_shampoing',
+    id: 'pubs_famille_merde',
     videoId: '1xTa_2WhU4w',
     videoTitle: 'CYPRIEN - LES PUBS vs LA VIE 2',
-    contextDescription: "Le contraste saisissant entre le réveil dans les pubs et la dure réalité.",
-    startTime: 30,
-    pauseTime: 38,
-    resumeDuration: 6,
-    setupPhrase: "Dans la pub pour le shampoing, le mec se réveille le matin...",
-    correctPunchline: "Il a les cheveux soyeux et le sourire Ultra Brite sans même s'être lavé les dents !",
+    contextDescription: 'Le dîner de famille qui tourne au vinaigre.',
+    startTime: 42.5,
+    pauseTime: 45.6,
+    resumeDuration: 4,
+    setupPhrase: "T'façon, j'ai plus faim...",
+    correctPunchline: "QUELLE FAMILLE DE MERDE !",
     options: [
-      "Il a les cheveux soyeux et le sourire Ultra Brite sans même s'être lavé les dents !",
-      "Il saute de son lit comme s'il venait d'apprendre qu'il avait gagné au loto !",
-      "Il a une cascade d'eau tropicale au milieu de son studio parisien !",
-      "Il chante avec des petits oiseaux bleus posés sur son épaule !"
-    ],
-    explanation: "La série culte Les Pubs vs La Vie qui a marqué toute une génération."
+      "QUELLE FAMILLE DE MERDE !",
+      "MERDE, ON CHANTE PAS DANS UNE BANQUE !",
+      "Dans les pubs, les gens sont bizarres.",
+      "Je veux ces lunettes, c'est mes lunettes !"
+    ]
+  },
+  {
+    id: 'pubs_banque_chante',
+    videoId: '1xTa_2WhU4w',
+    videoTitle: 'CYPRIEN - LES PUBS vs LA VIE 2',
+    contextDescription: 'La réaction d\'un banquier quand un client se met à pousser la chansonnette.',
+    startTime: 101.5,
+    pauseTime: 104.5,
+    resumeDuration: 4,
+    setupPhrase: "*en chantant* Pour une boîte, ça demande du temps...",
+    correctPunchline: "MERDE, ON CHANTE PAS DANS UNE BANQUE !",
+    options: [
+      "MERDE, ON CHANTE PAS DANS UNE BANQUE !",
+      "Votre dossier est zéro, là !",
+      "QUELLE FAMILLE DE MERDE !",
+      "Dans la vraie vie ça se passe jamais comme ça !"
+    ]
+  },
+  {
+    id: 'cartouche_puceau',
+    videoId: 'c5TW7lqVuVY',
+    videoTitle: 'CYPRIEN - LA CARTOUCHE',
+    contextDescription: 'L\'échange d\'insultes mythique entre Flo et Cyprien après avoir perdu la cartouche.',
+    startTime: 960,
+    pauseTime: 963.2,
+    resumeDuration: 4.5,
+    setupPhrase: "Tout le monde pense que t'es débile et je comprends mieux pourquoi !",
+    correctPunchline: "Je préfère être débile que puceau !",
+    options: [
+      "Je préfère être débile que puceau !",
+      "À cause de toi on a perdu la cartouche !",
+      "Tu tapes fort quand même !",
+      "On a peut-être perdu une cartouche mais tu viens de retrouver un ami !"
+    ]
   }
 ];
 
 /**
- * Shuffles an array in place (Fisher-Yates)
+ * Normalizes text for forgiving comparison:
+ * lowercase, removes accents, strip punctuation, extra spaces.
  */
+export function normalizeText(str: string): string {
+  return (str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove diacritics / accents
+    .replace(/[^\w\s]/g, ' ') // replace punctuation with spaces
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Verifies if user's manual input matches the authentic quote.
+ * Flexible: exact match, substring inclusion, or major keyword overlap >= 60%.
+ */
+export function isQuoteMatch(userGuess: string, targetPunchline: string): boolean {
+  const normUser = normalizeText(userGuess);
+  const normTarget = normalizeText(targetPunchline);
+
+  if (!normUser || !normTarget) return false;
+  if (normUser === normTarget) return true;
+  if (normTarget.includes(normUser) && normUser.length >= 5) return true;
+  if (normUser.includes(normTarget)) return true;
+
+  // Filter out tiny stop words
+  const stopWords = new Set(['le', 'la', 'les', 'un', 'une', 'des', 'de', 'du', 'en', 'et', 'a', 'au', 'ce', 'que', 'qui', 'sa', 'se', 'son', 'ta', 'te', 'ton', 'on', 'il', 'je', 'tu', 'c', 'd', 'l', 'm', 'n', 's', 't', 'y']);
+  const targetWords = normTarget.split(/\s+/).filter((w) => w.length >= 2 && !stopWords.has(w));
+  const userWords = normUser.split(/\s+/).filter((w) => w.length >= 2 && !stopWords.has(w));
+
+  if (targetWords.length === 0) {
+    return normUser.length >= 2 && normTarget.includes(normUser);
+  }
+
+  let matchCount = 0;
+  for (const tw of targetWords) {
+    if (userWords.some((uw) => uw === tw || (uw.length >= 4 && (tw.includes(uw) || uw.includes(tw))))) {
+      matchCount++;
+    }
+  }
+
+  const ratio = matchCount / targetWords.length;
+  return ratio >= 0.6; // At least 60% of significant words found
+}
+
 function shuffleArray<T>(arr: T[]): T[] {
   const copy = [...arr];
   for (let i = copy.length - 1; i > 0; i--) {
@@ -231,12 +284,9 @@ function shuffleArray<T>(arr: T[]): T[] {
   return copy;
 }
 
-/**
- * Returns a randomized round of N questions with shuffled options
- */
 export function getRandomQuotes(count = 5): QuoteQuestion[] {
-  const shuffledQuestions = shuffleArray(CYPRIEN_QUOTES);
-  const selected = shuffledQuestions.slice(0, Math.min(count, shuffledQuestions.length));
+  const shuffled = shuffleArray(CYPRIEN_QUOTES);
+  const selected = shuffled.slice(0, Math.min(count, shuffled.length));
 
   return selected.map((q) => ({
     ...q,

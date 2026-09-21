@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { QuoteAnswerRecord } from '@/types/quotes';
-import { Trophy, Check, X, RotateCcw, Share2, ExternalLink, Sparkles, Gamepad2 } from 'lucide-react';
+import { Trophy, Check, X, RotateCcw, Share2, ExternalLink, Keyboard, ListFilter, Gamepad2 } from 'lucide-react';
 
 interface Props {
   answers: QuoteAnswerRecord[];
@@ -16,27 +16,28 @@ export function QuoteEndCard({ answers, onPlayAgain, onBackToBlindtest }: Props)
 
   const totalScore = answers.reduce((acc, a) => acc + a.pointsEarned, 0);
   const correctCount = answers.filter((a) => a.isCorrect).length;
-  const maxPossible = answers.length * 1500;
+  const manualCount = answers.filter((a) => a.method === 'manual').length;
+  const maxPossible = answers.length * 1000;
 
-  // Compute Rank Title
+  // Rank title
   let rankTitle = 'Néophyte de la Cartouche 👶';
-  let rankDesc = 'Encore un petit effort pour maîtriser les punchlines de Cyprien !';
+  let rankDesc = 'Encore un petit effort pour connaître les répliques cultes par cœur !';
   let rankColor = 'text-zinc-300';
   let rankBg = 'bg-zinc-800/80 border-zinc-700';
 
-  if (totalScore >= 6000) {
+  if (totalScore >= 4500) {
     rankTitle = 'Légende Cyprienologique Suprême 👑';
-    rankDesc = 'Impressionnant ! Tu connais chaque phrase, chaque silence et chaque vanne par cœur.';
+    rankDesc = 'Score presque parfait ! Tu connais chaque mot des répliques par cœur.';
     rankColor = 'text-amber-300';
     rankBg = 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-amber-500/50 shadow-amber-500/20';
-  } else if (totalScore >= 4500) {
+  } else if (totalScore >= 3000) {
     rankTitle = 'Vrai Ancien des Geeks 🎮';
-    rankDesc = 'Une mémoire d\'acier ! Tu as grandi avec l\'âge d\'or de YouTube.';
+    rankDesc = 'Solide culture YouTube ! Tu as trouvé la plupart des répliques sans hésiter.';
     rankColor = 'text-orange-400';
     rankBg = 'bg-orange-500/15 border-orange-500/40 shadow-orange-500/20';
-  } else if (totalScore >= 3000) {
+  } else if (totalScore >= 1500) {
     rankTitle = 'Fan Émérite de YouTube 📺';
-    rankDesc = 'Bien joué ! Tu as de très bons réflexes sur les répliques cultes.';
+    rankDesc = 'Pas mal du tout ! Le QCM t\'a bien aidé sur les fins de phrases.';
     rankColor = 'text-amber-400';
     rankBg = 'bg-zinc-800/90 border-zinc-700';
   }
@@ -53,8 +54,8 @@ export function QuoteEndCard({ answers, onPlayAgain, onBackToBlindtest }: Props)
   }, [correctCount]);
 
   const handleShare = () => {
-    const emojis = answers.map((a) => (a.isCorrect ? '🟩' : '🟥')).join('');
-    const text = `💬 Nicolas Pichard - Mode Complète la réplique !\nScore : ${totalScore.toLocaleString('fr-FR')} pts (${correctCount}/${answers.length})\nRang : ${rankTitle}\n${emojis}\n\nJoue gratuitement sur https://nicolas-pichard.vercel.app`;
+    const emojis = answers.map((a) => (a.method === 'manual' ? '🟩' : a.method === 'qcm' ? '🟨' : '🟥')).join('');
+    const text = `💬 Nicolas Pichard - Mode Complète la réplique !\nScore : ${totalScore.toLocaleString('fr-FR')} pts (${correctCount}/${answers.length})\n🎯 Trouvé en saisie libre : ${manualCount}/${answers.length}\nRang : ${rankTitle}\n${emojis}\n\nJoue gratuitement sur https://nicolas-pichard.vercel.app`;
 
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -74,6 +75,7 @@ export function QuoteEndCard({ answers, onPlayAgain, onBackToBlindtest }: Props)
           </h2>
           <p className="text-xs text-zinc-400">
             Tu as trouvé <strong className="text-white">{correctCount} sur {answers.length}</strong> répliques cultes
+            {manualCount > 0 && <span> (dont <strong className="text-emerald-400">{manualCount} en saisie libre</strong> !)</span>}
           </p>
         </div>
 
@@ -104,10 +106,10 @@ export function QuoteEndCard({ answers, onPlayAgain, onBackToBlindtest }: Props)
           </span>
 
           <div className="flex flex-col gap-2">
-            {answers.map((ans, idx) => (
+            {answers.map((ans) => (
               <div
                 key={ans.question.id}
-                className="p-3 rounded-2xl bg-zinc-950/80 border border-zinc-800/80 flex items-start gap-3 text-xs"
+                className="p-3.5 rounded-2xl bg-zinc-950/80 border border-zinc-800/80 flex items-start gap-3 text-xs"
               >
                 <div
                   className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5 font-bold ${
@@ -119,13 +121,24 @@ export function QuoteEndCard({ answers, onPlayAgain, onBackToBlindtest }: Props)
                   {ans.isCorrect ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
                 </div>
 
-                <div className="flex flex-col min-w-0 flex-1 gap-0.5">
+                <div className="flex flex-col min-w-0 flex-1 gap-1">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-bold text-white truncate">
                       {ans.question.videoTitle}
                     </span>
-                    <span className="font-mono font-bold text-orange-400 shrink-0">
-                      +{ans.pointsEarned} pts
+
+                    <span
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
+                        ans.method === 'manual'
+                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                          : ans.method === 'qcm'
+                          ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                          : 'bg-red-500/15 text-red-400 border border-red-500/30'
+                      }`}
+                    >
+                      {ans.method === 'manual' && <Keyboard className="w-3 h-3" />}
+                      {ans.method === 'qcm' && <ListFilter className="w-3 h-3" />}
+                      <span>+{ans.pointsEarned} pts</span>
                     </span>
                   </div>
 
@@ -133,15 +146,21 @@ export function QuoteEndCard({ answers, onPlayAgain, onBackToBlindtest }: Props)
                     « {ans.question.setupPhrase} »
                   </p>
 
-                  <p className="text-emerald-300 font-medium">
+                  <p className="text-emerald-300 font-semibold">
                     👉 {ans.question.correctPunchline}
                   </p>
 
+                  {ans.userText && ans.method === 'manual' && (
+                    <p className="text-[11px] text-zinc-400">
+                      Ta saisie : <span className="text-zinc-200">"{ans.userText}"</span>
+                    </p>
+                  )}
+
                   <a
-                    href={`https://www.youtube.com/watch?v=${ans.question.videoId}&t=${ans.question.pauseTime}s`}
+                    href={`https://www.youtube.com/watch?v=${ans.question.videoId}&t=${Math.floor(ans.question.pauseTime)}s`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[10px] text-zinc-500 hover:text-orange-400 flex items-center gap-1 mt-1 transition-colors self-start"
+                    className="text-[10px] text-zinc-500 hover:text-orange-400 flex items-center gap-1 mt-0.5 transition-colors self-start"
                   >
                     <span>Voir sur YouTube</span>
                     <ExternalLink className="w-3 h-3" />

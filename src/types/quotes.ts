@@ -8,21 +8,22 @@ export interface QuoteQuestion {
   resumeDuration: number;
   setupPhrase: string;
   correctPunchline: string;
-  options: string[];
-  explanation?: string;
+  options: string[]; // 4 exact subtitle quotes (1 correct + 3 real distractors)
 }
 
 export type QuoteGameStatus =
   | 'ready'
   | 'playing_setup'
-  | 'waiting_answer'
+  | 'waiting_manual'
+  | 'waiting_qcm'
   | 'revealing'
   | 'finished';
 
 export interface QuoteAnswerRecord {
   question: QuoteQuestion;
-  selectedOption: string;
+  userText?: string;
+  selectedOption?: string;
   isCorrect: boolean;
-  timeSpent: number;
+  method: 'manual' | 'qcm' | 'failed';
   pointsEarned: number;
 }

@@ -2,21 +2,23 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { QuoteQuestion, QuoteGameStatus, QuoteAnswerRecord } from '@/types/quotes';
-import { getRandomQuotes } from '@/data/quotes';
+import { getRandomQuotes, isQuoteMatch } from '@/data/quotes';
 import { QuotePlayer, QuotePlayerRef } from './QuotePlayer';
 import { QuoteEndCard } from './QuoteEndCard';
 import {
   Sparkles,
-  Zap,
   Volume2,
   VolumeX,
+  Volume1,
   ArrowRight,
-  HelpCircle,
-  Clock,
+  RotateCcw,
   CheckCircle2,
   XCircle,
-  Play,
-  RotateCcw,
+  HelpCircle,
+  Keyboard,
+  ListFilter,
+  Send,
+  AlertCircle,
 } from 'lucide-react';
 
 interface Props {
@@ -28,7 +30,6 @@ interface Props {
 }
 
 const TOTAL_QUESTIONS = 5;
-const QUESTION_TIMEOUT = 15; // 15 seconds to answer
 
 export function QuoteGameView({
   volume,
@@ -40,13 +41,15 @@ export function QuoteGameView({
   const [questions, setQuestions] = useState<QuoteQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [gameStatus, setGameStatus] = useState<QuoteGameStatus>('ready');
+
+  // Input states
+  const [manualText, setManualText] = useState<string>('');
+  const [manualAttemptFailed, setManualAttemptFailed] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [answers, setAnswers] = useState<QuoteAnswerRecord[]>([]);
-  const [timeLeft, setTimeLeft] = useState<number>(QUESTION_TIMEOUT);
-  const [playerReady, setPlayerReady] = useState(false);
 
   const playerRef = useRef<QuotePlayerRef>(null);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Initialize 5 random questions
   const initGame = useCallback(() => {
@@ -54,84 +57,85 @@ export function QuoteGameView({
     setQuestions(qList);
     setCurrentIndex(0);
     setAnswers([]);
+    setManualText('');
+    setManualAttemptFailed(false);
     setSelectedOption(null);
-    setTimeLeft(QUESTION_TIMEOUT);
     setGameStatus('ready');
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
   }, []);
 
   useEffect(() => {
     initGame();
-    return () => {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    };
   }, [initGame]);
 
   const currentQuestion: QuoteQuestion | undefined = questions[currentIndex];
 
-  // Stop timer helper
-  const stopTimer = useCallback(() => {
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-  }, []);
-
-  // Submit Answer
-  const handleSelectOption = useCallback(
-    (option: string | null) => {
-      if (gameStatus !== 'waiting_answer' || !currentQuestion) return;
-      stopTimer();
-
-      const isCorrect = option === currentQuestion.correctPunchline;
-      const timeSpent = QUESTION_TIMEOUT - timeLeft;
-      const speedBonus = isCorrect ? Math.round((timeLeft / QUESTION_TIMEOUT) * 500) : 0;
-      const pointsEarned = isCorrect ? 1000 + speedBonus : 0;
-
-      setSelectedOption(option);
-      setGameStatus('revealing');
-
-      const record: QuoteAnswerRecord = {
-        question: currentQuestion,
-        selectedOption: option ?? 'Temps écoulé',
-        isCorrect,
-        timeSpent,
-        pointsEarned,
-      };
-
-      setAnswers((prev) => [...prev, record]);
-
-      // Trigger video continuation to reveal punchline in video!
-      playerRef.current?.revealPunchline();
-    },
-    [gameStatus, currentQuestion, stopTimer, timeLeft]
-  );
-
-  // Start 15s countdown when pause point is reached
+  // When pause is reached (~3s clip ended), activate manual input mode
   const handlePauseReached = useCallback(() => {
-    setGameStatus('waiting_answer');
-    setTimeLeft(QUESTION_TIMEOUT);
-
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-
-    timerIntervalRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerIntervalRef.current!);
-          timerIntervalRef.current = null;
-          handleSelectOption(null); // Timeout
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }, [handleSelectOption]);
+    setGameStatus('waiting_manual');
+    setManualAttemptFailed(false);
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+  }, []);
 
   const handleRevealFinished = useCallback(() => {
-    // Video finished playing the reveal
+    // Video finished playing the continuation
   }, []);
 
-  // Advance to next question
+  // Submit Manual Typing
+  const handleManualSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (gameStatus !== 'waiting_manual' || !currentQuestion || !manualText.trim()) return;
+
+    const trimmed = manualText.trim();
+    const isCorrect = isQuoteMatch(trimmed, currentQuestion.correctPunchline);
+
+    if (isCorrect) {
+      // Direct hit via manual input! 1 000 pts
+      const record: QuoteAnswerRecord = {
+        question: currentQuestion,
+        userText: trimmed,
+        isCorrect: true,
+        method: 'manual',
+        pointsEarned: 1000,
+      };
+      setAnswers((prev) => [...prev, record]);
+      setGameStatus('revealing');
+      playerRef.current?.revealPunchline();
+    } else {
+      // Incorrect manual guess: switch to QCM fallback!
+      setManualAttemptFailed(true);
+      setGameStatus('waiting_qcm');
+    }
+  };
+
+  // Switch to QCM fallback manually
+  const handleSwitchToQcm = () => {
+    setGameStatus('waiting_qcm');
+  };
+
+  // Submit QCM Choice
+  const handleSelectOption = (option: string) => {
+    if (gameStatus !== 'waiting_qcm' || !currentQuestion) return;
+
+    const isCorrect = option === currentQuestion.correctPunchline;
+    setSelectedOption(option);
+    setGameStatus('revealing');
+
+    const record: QuoteAnswerRecord = {
+      question: currentQuestion,
+      userText: manualText.trim() || undefined,
+      selectedOption: option,
+      isCorrect,
+      method: isCorrect ? 'qcm' : 'failed',
+      pointsEarned: isCorrect ? 500 : 0,
+    };
+
+    setAnswers((prev) => [...prev, record]);
+    playerRef.current?.revealPunchline();
+  };
+
+  // Next question
   const handleNext = () => {
     if (currentIndex + 1 >= questions.length) {
       setGameStatus('finished');
@@ -139,25 +143,16 @@ export function QuoteGameView({
     }
 
     setCurrentIndex((prev) => prev + 1);
+    setManualText('');
+    setManualAttemptFailed(false);
     setSelectedOption(null);
-    setTimeLeft(QUESTION_TIMEOUT);
     setGameStatus('ready');
   };
 
-  // Keyboard numbers 1, 2, 3, 4 to select options
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (gameStatus !== 'waiting_answer' || !currentQuestion) return;
-
-      const keyIndex = parseInt(e.key, 10) - 1;
-      if (keyIndex >= 0 && keyIndex < currentQuestion.options.length) {
-        handleSelectOption(currentQuestion.options[keyIndex]);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameStatus, currentQuestion, handleSelectOption]);
+  // Replay the 3s setup snippet
+  const handleReplaySetup = () => {
+    playerRef.current?.replaySetup();
+  };
 
   if (gameStatus === 'finished') {
     return (
@@ -172,7 +167,7 @@ export function QuoteGameView({
   if (!currentQuestion) return null;
 
   const currentScore = answers.reduce((acc, a) => acc + a.pointsEarned, 0);
-  const currentSpeedBonus = Math.round((timeLeft / QUESTION_TIMEOUT) * 500);
+  const lastAnswer = answers[answers.length - 1];
 
   return (
     <div className="w-full flex flex-col gap-4 max-w-lg mx-auto">
@@ -188,20 +183,11 @@ export function QuoteGameView({
           </span>
         </div>
 
-        {/* Total Live Score & Volume */}
-        <div className="flex items-center gap-3">
+        {/* Live Score */}
+        <div className="flex items-center gap-2">
           <span className="text-xs font-mono font-black text-white">
             {currentScore.toLocaleString('fr-FR')} pts
           </span>
-
-          <button
-            type="button"
-            onClick={onToggleMute}
-            className="text-zinc-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
-            title={isMuted ? 'Activer le son' : 'Couper le son'}
-          >
-            {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4" />}
-          </button>
         </div>
       </div>
 
@@ -217,15 +203,58 @@ export function QuoteGameView({
         isMuted={isMuted}
         onPauseReached={handlePauseReached}
         onRevealFinished={handleRevealFinished}
-        onReady={() => setPlayerReady(true)}
       />
 
-      {/* Gameplay interactive area */}
+      {/* Controls Bar: Replay 3s snippet + Dedicated Volume Slider */}
+      <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-2xl p-3 flex items-center justify-between gap-3 shadow-md backdrop-blur-md">
+        <button
+          type="button"
+          onClick={handleReplaySetup}
+          className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold flex items-center gap-1.5 border border-zinc-700 transition-all cursor-pointer"
+        >
+          <RotateCcw className="w-3.5 h-3.5 text-orange-400" />
+          <span>Réécouter l'extrait (3s)</span>
+        </button>
+
+        {/* Volume Slider */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggleMute}
+            className="text-zinc-400 hover:text-zinc-100 transition-colors p-1 rounded cursor-pointer"
+            title={isMuted ? 'Activer le son' : 'Couper le son'}
+          >
+            {isMuted || volume === 0 ? (
+              <VolumeX className="w-4 h-4 text-red-400" />
+            ) : volume < 50 ? (
+              <Volume1 className="w-4 h-4 text-zinc-300" />
+            ) : (
+              <Volume2 className="w-4 h-4 text-zinc-300" />
+            )}
+          </button>
+
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={isMuted ? 0 : volume}
+            onChange={(e) => onVolumeChange(Number(e.target.value))}
+            className="w-16 sm:w-24 h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-orange-500"
+            title={`Volume : ${isMuted ? 0 : volume}%`}
+          />
+
+          <span className="text-[11px] font-mono text-zinc-400 w-8 text-right hidden sm:inline">
+            {isMuted ? '0%' : `${volume}%`}
+          </span>
+        </div>
+      </div>
+
+      {/* Main Interactive Box */}
       <div className="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-5 shadow-2xl backdrop-blur-md flex flex-col gap-4">
-        {/* Setup Quote Prompt */}
+        {/* The Exact Quote Setup from Subtitles */}
         <div className="flex flex-col gap-1.5">
           <span className="text-[11px] uppercase tracking-widest text-zinc-500 font-bold">
-            Complète la réplique
+            Complète la réplique exacte
           </span>
           <p className="text-sm sm:text-base font-extrabold text-white italic bg-zinc-950/80 border border-zinc-800 rounded-2xl p-3.5 shadow-inner">
             « {currentQuestion.setupPhrase} <span className="text-orange-400">... »</span>
@@ -235,134 +264,164 @@ export function QuoteGameView({
           </span>
         </div>
 
-        {/* Countdown Timer (during waiting_answer) */}
-        {gameStatus === 'waiting_answer' && (
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-zinc-400 font-medium flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-orange-400" />
-                <span>Temps restant : <strong className={timeLeft <= 5 ? 'text-red-400 animate-pulse' : 'text-white'}>{timeLeft}s</strong></span>
+        {/* ---------------- STEP 1: MANUAL TYPING ---------------- */}
+        {gameStatus === 'waiting_manual' && (
+          <form onSubmit={handleManualSubmit} className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-zinc-300 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Keyboard className="w-3.5 h-3.5 text-orange-400" />
+                  <span>Écris la suite de la phrase :</span>
+                </span>
+                <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                  +1 000 pts si trouvé
+                </span>
+              </label>
+
+              <div className="relative flex items-center">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={manualText}
+                  onChange={(e) => setManualText(e.target.value)}
+                  placeholder="Tape la réplique au clavier..."
+                  className="w-full pl-4 pr-24 py-3 bg-zinc-950 border border-zinc-800 rounded-2xl text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/40 font-medium transition-all"
+                  autoComplete="off"
+                />
+
+                <button
+                  type="submit"
+                  disabled={!manualText.trim()}
+                  className="absolute right-1.5 px-3.5 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-zinc-950 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-orange-950/40"
+                >
+                  <span>Valider</span>
+                  <Send className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[11px] text-zinc-500">
+                Pas de limite de temps, prends ton temps !
               </span>
 
-              <span className="text-amber-400 text-[11px] font-mono flex items-center gap-1">
-                <Zap className="w-3 h-3 fill-amber-400" />
-                <span>Bonus vitesse : +{currentSpeedBonus} pts</span>
+              <button
+                type="button"
+                onClick={handleSwitchToQcm}
+                className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>J'hésite, passer au QCM (+500 pts)</span>
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* ---------------- STEP 2: QCM FALLBACK (IF WRONG OR REQUESTED) ---------------- */}
+        {gameStatus === 'waiting_qcm' && (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                <ListFilter className="w-3.5 h-3.5 text-amber-400" />
+                {manualAttemptFailed
+                  ? 'Pas tout à fait ! Choisis parmi les 4 propositions :'
+                  : 'Choisis parmi les 4 propositions :'}
+              </span>
+
+              <span className="text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                +500 pts si trouvé
               </span>
             </div>
 
-            {/* Progress bar */}
-            <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-1000 ${
-                  timeLeft <= 5 ? 'bg-red-500' : 'bg-gradient-to-r from-orange-500 to-amber-400'
-                }`}
-                style={{ width: `${(timeLeft / QUESTION_TIMEOUT) * 100}%` }}
-              />
+            <div className="grid grid-cols-1 gap-2">
+              {currentQuestion.options.map((option, idx) => {
+                const letter = String.fromCharCode(65 + idx); // A, B, C, D
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => handleSelectOption(option)}
+                    className="p-3.5 rounded-2xl border bg-zinc-950/80 border-zinc-800 text-zinc-200 hover:border-zinc-700 hover:bg-zinc-800/70 text-left flex items-start gap-3 transition-all cursor-pointer"
+                  >
+                    <span className="w-6 h-6 rounded-lg bg-zinc-800 text-zinc-300 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                      {letter}
+                    </span>
+                    <span className="text-xs sm:text-sm font-semibold leading-snug">
+                      {option}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* 4 Choices */}
-        <div className="grid grid-cols-1 gap-2.5">
-          {currentQuestion.options.map((option, idx) => {
-            const letter = String.fromCharCode(65 + idx); // A, B, C, D
-            const isSelected = selectedOption === option;
-            const isCorrect = option === currentQuestion.correctPunchline;
-
-            let cardStyle =
-              'bg-zinc-950/80 border-zinc-800 text-zinc-200 hover:border-zinc-700 hover:bg-zinc-800/60';
-
-            if (gameStatus === 'revealing') {
-              if (isCorrect) {
-                cardStyle =
-                  'bg-emerald-500/20 border-emerald-500/80 text-emerald-100 shadow-lg shadow-emerald-950/40 ring-2 ring-emerald-500/40';
-              } else if (isSelected && !isCorrect) {
-                cardStyle =
-                  'bg-red-500/20 border-red-500/80 text-red-200 shadow-lg shadow-red-950/40';
-              } else {
-                cardStyle = 'bg-zinc-950/40 border-zinc-900 text-zinc-600 opacity-60';
-              }
-            } else if (gameStatus !== 'waiting_answer') {
-              cardStyle = 'bg-zinc-950/40 border-zinc-900 text-zinc-500 cursor-not-allowed';
-            }
-
-            return (
-              <button
-                key={option}
-                type="button"
-                onClick={() => handleSelectOption(option)}
-                disabled={gameStatus !== 'waiting_answer'}
-                className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all cursor-pointer ${cardStyle}`}
-              >
-                <div
-                  className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs shrink-0 mt-0.5 ${
-                    gameStatus === 'revealing' && isCorrect
-                      ? 'bg-emerald-500 text-zinc-950'
-                      : gameStatus === 'revealing' && isSelected && !isCorrect
-                      ? 'bg-red-500 text-white'
-                      : 'bg-zinc-800 text-zinc-300'
-                  }`}
-                >
-                  {gameStatus === 'revealing' && isCorrect ? (
-                    <CheckCircle2 className="w-4 h-4" />
-                  ) : gameStatus === 'revealing' && isSelected && !isCorrect ? (
-                    <XCircle className="w-4 h-4" />
-                  ) : (
-                    letter
-                  )}
-                </div>
-
-                <div className="flex flex-col min-w-0 flex-1">
-                  <span className="text-xs sm:text-sm font-semibold leading-snug">
-                    {option}
-                  </span>
-                </div>
-
-                {gameStatus === 'waiting_answer' && (
-                  <span className="text-[10px] text-zinc-500 font-mono hidden sm:inline self-center">
-                    [{idx + 1}]
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Post-Answer Reveal Bar */}
+        {/* ---------------- STEP 3: REVEALING IN VIDEO ---------------- */}
         {gameStatus === 'revealing' && (
           <div className="flex flex-col gap-3 pt-2 border-t border-zinc-800">
-            <div className="flex items-center justify-between">
+            {/* Outcome banner */}
+            <div
+              className={`p-3.5 rounded-2xl border flex items-center justify-between ${
+                lastAnswer?.isCorrect
+                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200'
+                  : 'bg-red-500/15 border-red-500/40 text-red-200'
+              }`}
+            >
               <div className="flex items-center gap-2">
-                {selectedOption === currentQuestion.correctPunchline ? (
-                  <span className="text-sm font-black text-emerald-400 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Exact ! +{answers[answers.length - 1]?.pointsEarned} pts</span>
-                  </span>
+                {lastAnswer?.isCorrect ? (
+                  <>
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                    <div>
+                      <span className="font-black text-sm block">
+                        {lastAnswer.method === 'manual'
+                          ? 'Bien joué ! Trouvé en saisie libre !'
+                          : 'Bien joué ! Trouvé avec le QCM !'}
+                      </span>
+                      <span className="text-[11px] text-emerald-300">
+                        La vidéo rejoue la phrase exacte à l'écran.
+                      </span>
+                    </div>
+                  </>
                 ) : (
-                  <span className="text-sm font-black text-red-400 flex items-center gap-1.5">
-                    <XCircle className="w-4 h-4" />
-                    <span>Raté ! 0 pt</span>
-                  </span>
+                  <>
+                    <XCircle className="w-5 h-5 text-red-400 shrink-0" />
+                    <div>
+                      <span className="font-black text-sm block">
+                        Manqué ! 0 pt
+                      </span>
+                      <span className="text-[11px] text-red-300">
+                        La vidéo rejoue la phrase exacte pour te montrer.
+                      </span>
+                    </div>
+                  </>
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={handleNext}
-                className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-red-600 via-orange-500 to-amber-500 hover:from-red-500 hover:to-amber-400 text-zinc-950 font-black text-xs tracking-wide shadow-lg shadow-orange-950/40 transition-all cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95"
-              >
-                <span>
-                  {currentIndex + 1 >= questions.length ? 'Voir les résultats 🏆' : 'Suivant ➡️'}
-                </span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+              <span className="font-mono font-black text-base text-white shrink-0 ml-2">
+                +{lastAnswer?.pointsEarned || 0} pts
+              </span>
             </div>
 
-            {currentQuestion.explanation && (
-              <p className="text-[11px] text-zinc-400 italic bg-zinc-950/60 p-2.5 rounded-xl border border-zinc-800/80">
-                💡 {currentQuestion.explanation}
+            {/* Revealed Answer Box */}
+            <div className="p-3 rounded-2xl bg-zinc-950 border border-zinc-800 flex flex-col gap-1 text-xs">
+              <span className="text-zinc-500 uppercase tracking-wider text-[10px] font-bold">
+                Réplique exacte complète
+              </span>
+              <p className="font-bold text-white text-sm">
+                « {currentQuestion.setupPhrase} <span className="text-emerald-400">{currentQuestion.correctPunchline}</span> »
               </p>
-            )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleNext}
+              className="mt-1 w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-red-600 via-orange-500 to-amber-500 hover:from-red-500 hover:to-amber-400 text-zinc-950 font-black text-sm tracking-wide shadow-xl shadow-orange-950/40 transition-all cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
+            >
+              <span>
+                {currentIndex + 1 >= questions.length ? 'Voir les résultats 🏆' : 'Réplique suivante ➡️'}
+              </span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>
