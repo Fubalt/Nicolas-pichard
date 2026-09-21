@@ -13,6 +13,7 @@ import { Play, RotateCcw, Pause, Sparkles, Volume2, VolumeX } from 'lucide-react
 export interface QuotePlayerRef {
   playSetup: () => void;
   replaySetup: () => void;
+  replayFullScene: () => void;
   revealPunchline: () => void;
   pause: () => void;
   resume: () => void;
@@ -49,6 +50,9 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
 
+  // Runtime guarantee: setup always has at least 3.8s breathing room
+  const effectiveStartTime = Math.max(0, pauseTime - Math.max(3.8, pauseTime - startTime));
+
   const [isReady, setIsReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
@@ -57,10 +61,10 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
 
   // Playback state tracking
   // 'standby': initial state, paused at startTime, waiting for user
-  // 'setup_playing': playing the 3s setup clip
-  // 'setup_paused': paused after 3s setup clip (or paused by user)
-  // 'revealing': playing the punchline continuation
-  // 'reveal_finished': reveal completed
+  // 'setup_playing': playing the setup clip
+  // 'setup_paused': paused after setup clip (or paused by user)
+  // 'revealing': playing the punchline continuation continuously
+  // 'reveal_finished': reveal initial segment finished
   const [phase, setPhase] = useState<
     'standby' | 'setup_playing' | 'setup_paused' | 'revealing' | 'reveal_finished'
   >('standby');
@@ -73,7 +77,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
   // Track playback time elapsed within current segment
   const elapsedPlayTimeRef = useRef<number>(0);
   const lastTimeCheckRef = useRef<number>(0);
-  const targetDurationRef = useRef<number>(3);
+  const targetDurationRef = useRef<number>(3.8);
   const currentModeRef = useRef<'setup' | 'reveal'>('setup');
 
   const showCenterIconFeedback = (icon: 'play' | 'pause' | 'replay') => {
@@ -131,6 +135,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
       currentModeRef.current = mode;
       targetDurationRef.current = duration;
       lastTimeCheckRef.current = performance.now();
+      let hasCompleted = false;
 
       const loop = () => {
         if (!playerRef.current) return;
@@ -150,26 +155,34 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
 
             const currentSec = playerRef.current.getCurrentTime?.() ?? 0;
 
-            // Cut condition:
-            // 1. Cut if actual video timestamp reaches pauseTime (end of the setup subtitle)
-            // 2. OR cut if elapsed real playback time reaches the target duration
-            const reachedPauseTimestamp =
-              mode === 'setup' &&
-              currentSec >= startTime &&
-              currentSec >= pauseTime - 0.05;
+            if (mode === 'setup') {
+              // Cut condition for setup:
+              // Strictly cut when the actual video timestamp reaches pauseTime + 0.12s
+              // The +0.12s buffer gives the speaker breathing room so the final word is never cut off
+              const reachedPauseTimestamp =
+                currentSec >= effectiveStartTime &&
+                currentSec >= pauseTime + 0.12;
 
-            const reachedElapsedDuration =
-              elapsedPlayTimeRef.current >= targetDurationRef.current;
-
-            if (reachedPauseTimestamp || reachedElapsedDuration) {
-              try {
-                playerRef.current.pauseVideo();
-              } catch (e) {}
-              setIsPlaying(false);
-              setProgress(1);
-              clearTimers();
-              onComplete();
-              return;
+              if (reachedPauseTimestamp) {
+                try {
+                  playerRef.current.pauseVideo();
+                } catch (e) {}
+                setIsPlaying(false);
+                setProgress(1);
+                clearTimers();
+                onComplete();
+                return;
+              }
+            } else if (mode === 'reveal') {
+              // In reveal mode: DO NOT PAUSE THE VIDEO!
+              // The video continues playing the scene seamlessly.
+              if (elapsedPlayTimeRef.current >= targetDurationRef.current) {
+                setProgress(1);
+                if (!hasCompleted) {
+                  hasCompleted = true;
+                  onComplete();
+                }
+              }
             }
           } else {
             // Video is buffering or paused, keep clock aligned
@@ -182,24 +195,26 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
 
       animFrameRef.current = requestAnimationFrame(loop);
 
-      // Safety timeout: strictly cuts off if anim loop stalls (e.g. background tab)
-      const safetyMs = Math.ceil(duration * 1000 + 400);
-      safetyTimeoutRef.current = setTimeout(() => {
-        if (playerRef.current && typeof playerRef.current.pauseVideo === 'function') {
-          try {
-            playerRef.current.pauseVideo();
-          } catch (e) {}
-        }
-        setIsPlaying(false);
-        setProgress(1);
-        clearTimers();
-        onComplete();
-      }, safetyMs);
+      // Safety timeout: strictly for setup mode fallback if anim loop stalls (e.g. background tab)
+      if (mode === 'setup') {
+        const safetyMs = Math.ceil((duration + 3.5) * 1000);
+        safetyTimeoutRef.current = setTimeout(() => {
+          if (playerRef.current && typeof playerRef.current.pauseVideo === 'function') {
+            try {
+              playerRef.current.pauseVideo();
+            } catch (e) {}
+          }
+          setIsPlaying(false);
+          setProgress(1);
+          clearTimers();
+          onComplete();
+        }, safetyMs);
+      }
     },
-    [startTime, pauseTime, disableCaptions]
+    [effectiveStartTime, pauseTime, disableCaptions]
   );
 
-  // Play initial 3s setup snippet from startTime
+  // Play initial setup snippet from effectiveStartTime
   const playSetup = useCallback(() => {
     if (!playerRef.current) return;
     userHasClickedPlayRef.current = true;
@@ -208,7 +223,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
     setIsPlaying(true);
     showCenterIconFeedback('play');
 
-    const duration = Math.max(1.8, pauseTime - startTime);
+    const duration = Math.max(3.8, pauseTime - effectiveStartTime);
     elapsedPlayTimeRef.current = 0;
     setProgress(0);
 
@@ -220,7 +235,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
         playerRef.current.unMute?.();
         playerRef.current.setVolume?.(volume);
       }
-      playerRef.current.seekTo(startTime, true);
+      playerRef.current.seekTo(effectiveStartTime, true);
       playerRef.current.playVideo();
 
       startMonitoring('setup', duration, () => {
@@ -228,9 +243,9 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
         onPauseReached();
       });
     } catch (e) {}
-  }, [startTime, pauseTime, volume, isMuted, disableCaptions, startMonitoring, onPauseReached]);
+  }, [effectiveStartTime, pauseTime, volume, isMuted, disableCaptions, startMonitoring, onPauseReached]);
 
-  // Replay the 3s setup snippet from the start
+  // Replay the setup snippet from the start
   const replaySetup = useCallback(() => {
     playSetup();
   }, [playSetup]);
@@ -243,8 +258,6 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
     setIsPlaying(true);
     showCenterIconFeedback('play');
 
-    const remaining = Math.max(0.2, targetDurationRef.current - elapsedPlayTimeRef.current);
-
     try {
       disableCaptions(playerRef.current);
       playerRef.current.playVideo();
@@ -256,7 +269,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
     } catch (e) {}
   }, [disableCaptions, startMonitoring, onPauseReached]);
 
-  // Reveal the punchline continuation (from pauseTime for resumeDuration)
+  // Reveal the punchline and continue playing the scene continuously!
   const revealPunchline = useCallback(() => {
     if (!playerRef.current) return;
     userHasClickedPlayRef.current = true;
@@ -280,11 +293,39 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
       playerRef.current.playVideo();
 
       startMonitoring('reveal', duration, () => {
-        setPhase('reveal_finished');
         onRevealFinished();
       });
     } catch (e) {}
   }, [pauseTime, resumeDuration, volume, isMuted, disableCaptions, startMonitoring, onRevealFinished]);
+
+  // Replay from the beginning of the setup phrase and keep playing continuously through the punchline
+  const replayFullScene = useCallback(() => {
+    if (!playerRef.current) return;
+    userHasClickedPlayRef.current = true;
+    setPhase('revealing');
+    setIsPlaying(true);
+    showCenterIconFeedback('play');
+
+    const totalDuration = Math.max(3.8, pauseTime - effectiveStartTime) + Math.max(2.5, resumeDuration);
+    elapsedPlayTimeRef.current = 0;
+    setProgress(0);
+
+    try {
+      disableCaptions(playerRef.current);
+      if (isMuted) {
+        playerRef.current.mute?.();
+      } else {
+        playerRef.current.unMute?.();
+        playerRef.current.setVolume?.(volume);
+      }
+      playerRef.current.seekTo(effectiveStartTime, true);
+      playerRef.current.playVideo();
+
+      startMonitoring('reveal', totalDuration, () => {
+        onRevealFinished();
+      });
+    } catch (e) {}
+  }, [effectiveStartTime, pauseTime, resumeDuration, volume, isMuted, disableCaptions, startMonitoring, onRevealFinished]);
 
   // Replay punchline reveal
   const replayReveal = useCallback(() => {
@@ -316,34 +357,37 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
     }
 
     if (phase === 'setup_paused') {
-      // Replay the 3s clip
+      // Replay the setup clip
       replaySetup();
       return;
     }
 
-    if (phase === 'revealing') {
+    if (phase === 'revealing' || phase === 'reveal_finished') {
       if (isPlaying) {
         pause();
       } else {
-        // Resume reveal
+        // Resume continuous playback
         if (playerRef.current) {
-          playerRef.current.playVideo();
-          setIsPlaying(true);
-          showCenterIconFeedback('play');
+          try {
+            const currentSec = playerRef.current.getCurrentTime?.() ?? 0;
+            const dur = playerRef.current.getDuration?.() ?? 0;
+            if (dur > 0 && currentSec >= dur - 0.5) {
+              playerRef.current.seekTo(pauseTime, true);
+            }
+            playerRef.current.playVideo();
+            setIsPlaying(true);
+            showCenterIconFeedback('play');
+          } catch (e) {}
         }
       }
       return;
     }
-
-    if (phase === 'reveal_finished') {
-      replayReveal();
-      return;
-    }
-  }, [phase, isPlaying, playSetup, pause, replaySetup, replayReveal]);
+  }, [phase, isPlaying, playSetup, pause, replaySetup, pauseTime]);
 
   useImperativeHandle(ref, () => ({
     playSetup,
     replaySetup,
+    replayFullScene,
     revealPunchline,
     pause,
     resume: resumeSetup,
@@ -403,14 +447,14 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
                 event.target.setVolume(volume);
               }
 
-              // Pre-cue video parked at startTime. Strictly prevent autoplay.
+              // Pre-cue video parked at effectiveStartTime. Strictly prevent autoplay.
               if (typeof event.target.cueVideoById === 'function') {
                 event.target.cueVideoById({
                   videoId,
-                  startSeconds: startTime,
+                  startSeconds: effectiveStartTime,
                 });
               } else {
-                event.target.seekTo(startTime, false);
+                event.target.seekTo(effectiveStartTime, false);
                 event.target.pauseVideo();
               }
             } catch (e) {}
@@ -422,12 +466,12 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
 
             // IRONCLAD AUTOPLAY PROTECTION:
             // If YouTube attempts to play before the user explicitly clicked play,
-            // intercept immediately, force-pause and rewind to startTime.
+            // intercept immediately, force-pause and rewind to effectiveStartTime.
             if (event.data === window.YT.PlayerState.PLAYING) {
               if (!userHasClickedPlayRef.current) {
                 try {
                   event.target.pauseVideo();
-                  event.target.seekTo(startTime, false);
+                  event.target.seekTo(effectiveStartTime, false);
                 } catch (e) {}
                 setIsPlaying(false);
                 return;
@@ -470,7 +514,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
         } catch (e) {}
       }
     };
-  }, [videoId, startTime, disableCaptions]);
+  }, [videoId, effectiveStartTime, disableCaptions]);
 
   return (
     <div className="relative w-full aspect-video rounded-2xl sm:rounded-3xl overflow-hidden bg-black border border-zinc-800 shadow-2xl select-none group">
@@ -526,14 +570,20 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
             <span className="text-orange-400">Choisis la suite ci-dessous !</span>
           </>
         )}
-        {phase === 'revealing' && (
+        {(phase === 'revealing' || phase === 'reveal_finished') && (
           <>
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
-            <span className="text-emerald-300 font-medium">Révélation en vidéo !</span>
+            {isPlaying ? (
+              <>
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                <span className="text-emerald-300 font-medium">Extrait en cours de lecture...</span>
+              </>
+            ) : (
+              <>
+                <Pause className="w-3 h-3 text-zinc-400" />
+                <span className="text-zinc-400 font-medium">Extrait en pause</span>
+              </>
+            )}
           </>
-        )}
-        {phase === 'reveal_finished' && (
-          <span className="text-zinc-400 font-medium">Réplique terminée</span>
         )}
       </div>
 
@@ -542,6 +592,12 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
         <div className="absolute bottom-3 right-3 px-3 py-1 rounded-xl bg-zinc-950/80 border border-zinc-800 text-zinc-300 text-[11px] font-semibold flex items-center gap-1.5 backdrop-blur-md z-20 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity">
           <RotateCcw className="w-3 h-3 text-orange-400" />
           <span>Cliquer ou [Espace] pour réécouter</span>
+        </div>
+      )}
+      {hasStarted && !isPlaying && (phase === 'revealing' || phase === 'reveal_finished') && (
+        <div className="absolute bottom-3 right-3 px-3 py-1 rounded-xl bg-zinc-950/80 border border-zinc-800 text-zinc-300 text-[11px] font-semibold flex items-center gap-1.5 backdrop-blur-md z-20 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity">
+          <Play className="w-3 h-3 text-emerald-400 fill-emerald-400" />
+          <span>Cliquer ou [Espace] pour reprendre</span>
         </div>
       )}
 

@@ -141,10 +141,14 @@ export function QuoteGameView({
     setGameStatus('ready');
   }, [currentIndex, questions.length]);
 
-  // Replay 3s snippet
+  // Replay snippet or full scene if revealing
   const handleReplaySetup = useCallback(() => {
-    playerRef.current?.replaySetup();
-  }, []);
+    if (gameStatus === 'revealing') {
+      playerRef.current?.replayFullScene();
+    } else {
+      playerRef.current?.replaySetup();
+    }
+  }, [gameStatus]);
 
   // Switch format (5 vs 10 questions)
   const handleChangeFormat = (count: number) => {
@@ -302,7 +306,7 @@ export function QuoteGameView({
           title="Réécouter l'extrait [Espace]"
         >
           <RotateCcw className="w-3.5 h-3.5 text-orange-400" />
-          <span>Réécouter l'extrait</span>
+          <span>{gameStatus === 'revealing' ? "Revoir depuis le début" : "Réécouter l'extrait"}</span>
           <span className="text-[10px] text-zinc-400 font-mono ml-0.5 px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-700/60 hidden sm:inline">
             Espace
           </span>
