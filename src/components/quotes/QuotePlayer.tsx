@@ -124,7 +124,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
     } catch (e) {}
   }, []);
 
-  // Internal monitoring loop using performance.now() while video is PLAYING
+  // Internal monitoring loop using performance.now() and getCurrentTime() while video is PLAYING
   const startMonitoring = useCallback(
     (mode: 'setup' | 'reveal', duration: number, onComplete: () => void) => {
       clearTimers();
@@ -148,8 +148,20 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
             const currentRatio = Math.min(1, elapsedPlayTimeRef.current / targetDurationRef.current);
             setProgress(currentRatio);
 
-            if (elapsedPlayTimeRef.current >= targetDurationRef.current) {
-              // Target time reached! Stop video cleanly.
+            const currentSec = playerRef.current.getCurrentTime?.() ?? 0;
+
+            // Cut condition:
+            // 1. Cut if actual video timestamp reaches pauseTime (end of the setup subtitle)
+            // 2. OR cut if elapsed real playback time reaches the target duration
+            const reachedPauseTimestamp =
+              mode === 'setup' &&
+              currentSec >= startTime &&
+              currentSec >= pauseTime - 0.05;
+
+            const reachedElapsedDuration =
+              elapsedPlayTimeRef.current >= targetDurationRef.current;
+
+            if (reachedPauseTimestamp || reachedElapsedDuration) {
               try {
                 playerRef.current.pauseVideo();
               } catch (e) {}
@@ -171,7 +183,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
       animFrameRef.current = requestAnimationFrame(loop);
 
       // Safety timeout: strictly cuts off if anim loop stalls (e.g. background tab)
-      const safetyMs = Math.ceil(duration * 1000 + 800);
+      const safetyMs = Math.ceil(duration * 1000 + 400);
       safetyTimeoutRef.current = setTimeout(() => {
         if (playerRef.current && typeof playerRef.current.pauseVideo === 'function') {
           try {
@@ -184,7 +196,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
         onComplete();
       }, safetyMs);
     },
-    [disableCaptions]
+    [startTime, pauseTime, disableCaptions]
   );
 
   // Play initial 3s setup snippet from startTime
