@@ -13,7 +13,7 @@ import { ActionControls } from '@/components/ActionControls';
 import { EndGameCard } from '@/components/EndGameCard';
 import { Header } from '@/components/Header';
 import { RulesModal } from '@/components/RulesModal';
-import { Sparkles, History, Gamepad2, Swords, MessageSquareQuote, FlaskConical } from 'lucide-react';
+import { Sparkles, History, Gamepad2, Swords, MessageSquareQuote } from 'lucide-react';
 
 import { useMultiplayerRoom } from '@/hooks/useMultiplayerRoom';
 import { CreateJoinRoom } from '@/components/multiplayer/CreateJoinRoom';
@@ -22,11 +22,10 @@ import { BattleHeader } from '@/components/multiplayer/BattleHeader';
 import { BattleRoundRecap } from '@/components/multiplayer/BattleRoundRecap';
 import { BattlePodium } from '@/components/multiplayer/BattlePodium';
 import { QuoteGameView } from '@/components/quotes/QuoteGameView';
-import { GeeksDevLab } from '@/components/dev/GeeksDevLab';
 
 export default function Home() {
-  // Navigation Mode: Solo vs Battle vs Quotes vs Dev
-  const [mainTab, setMainTab] = useState<'solo' | 'battle' | 'quotes' | 'dev'>('solo');
+  // Navigation Mode: Solo vs Battle vs Quotes
+  const [mainTab, setMainTab] = useState<'solo' | 'battle' | 'quotes'>('solo');
   const [initialRoomParam, setInitialRoomParam] = useState<string>('');
 
   // Solo Mode State
@@ -356,30 +355,6 @@ export default function Home() {
                 NEW
               </span>
             </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (playerRef.current && isPlaying) playerRef.current.pauseSnippet();
-                setMainTab('dev');
-              }}
-              className={`py-2 px-2 sm:px-2.5 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
-                mainTab === 'dev'
-                  ? 'bg-purple-600 text-white shadow-md font-black shadow-purple-950/50'
-                  : 'text-zinc-400 hover:text-purple-300 hover:bg-zinc-800/40'
-              }`}
-              title="Outil de test Dev dédié à la vidéo « Les geeks »"
-            >
-              <FlaskConical
-                className={`w-3.5 h-3.5 ${
-                  mainTab === 'dev' ? 'text-white' : 'text-purple-400'
-                }`}
-              />
-              <span className="hidden xs:inline sm:inline">Lab Dev</span>
-              <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-purple-500/30 text-purple-200 border border-purple-400/40">
-                Geeks
-              </span>
-            </button>
           </div>
         </div>
 
@@ -670,18 +645,6 @@ export default function Home() {
             onVolumeChange={handleVolumeChange}
             onToggleMute={handleToggleMute}
             onBackToBlindtest={() => setMainTab('solo')}
-            onOpenDevLab={() => setMainTab('dev')}
-          />
-        )}
-
-        {/* ----------------- DEV LAB (CYPRIEN - LES GEEKS) ----------------- */}
-        {mainTab === 'dev' && (
-          <GeeksDevLab
-            volume={volume}
-            isMuted={isMuted}
-            onVolumeChange={handleVolumeChange}
-            onToggleMute={handleToggleMute}
-            onClose={() => setMainTab('quotes')}
           />
         )}
       </main>

@@ -27,7 +27,6 @@ interface Props {
   onBackToBlindtest: () => void;
   customQuestions?: QuoteQuestion[];
   modeTitle?: string;
-  onOpenDevLab?: () => void;
 }
 
 export function QuoteGameView({
@@ -38,7 +37,6 @@ export function QuoteGameView({
   onBackToBlindtest,
   customQuestions,
   modeTitle,
-  onOpenDevLab,
 }: Props) {
   const [totalQuestions, setTotalQuestions] = useState<number>(10);
   const [questions, setQuestions] = useState<QuoteQuestion[]>([]);
@@ -231,19 +229,8 @@ export function QuoteGameView({
             )}
           </div>
 
-          {/* Right Side: Dev Lab Button + Format Switcher + Score */}
+          {/* Right Side: Format Switcher + Score */}
           <div className="flex items-center gap-2">
-            {onOpenDevLab && (
-              <button
-                type="button"
-                onClick={onOpenDevLab}
-                className="px-2.5 py-1 rounded-lg bg-purple-950/70 hover:bg-purple-900/80 border border-purple-500/40 text-purple-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
-                title="Ouvrir l'outil de test Dev pour « Les geeks »"
-              >
-                <span>🧪 Lab Dev: Les Geeks</span>
-              </button>
-            )}
-
             <div className="flex items-center bg-zinc-950/80 p-0.5 rounded-lg border border-zinc-800 text-[10px] font-bold">
               <button
                 type="button"
