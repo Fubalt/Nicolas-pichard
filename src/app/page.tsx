@@ -13,7 +13,7 @@ import { ActionControls } from '@/components/ActionControls';
 import { EndGameCard } from '@/components/EndGameCard';
 import { Header } from '@/components/Header';
 import { RulesModal } from '@/components/RulesModal';
-import { Sparkles, History, Gamepad2, Swords } from 'lucide-react';
+import { Sparkles, History, Gamepad2, Swords, MessageSquareQuote } from 'lucide-react';
 
 import { useMultiplayerRoom } from '@/hooks/useMultiplayerRoom';
 import { CreateJoinRoom } from '@/components/multiplayer/CreateJoinRoom';
@@ -21,10 +21,11 @@ import { BattleLobby } from '@/components/multiplayer/BattleLobby';
 import { BattleHeader } from '@/components/multiplayer/BattleHeader';
 import { BattleRoundRecap } from '@/components/multiplayer/BattleRoundRecap';
 import { BattlePodium } from '@/components/multiplayer/BattlePodium';
+import { QuoteGameView } from '@/components/quotes/QuoteGameView';
 
 export default function Home() {
-  // Navigation Mode: Solo vs Battle
-  const [mainTab, setMainTab] = useState<'solo' | 'battle'>('solo');
+  // Navigation Mode: Solo vs Battle vs Quotes
+  const [mainTab, setMainTab] = useState<'solo' | 'battle' | 'quotes'>('solo');
   const [initialRoomParam, setInitialRoomParam] = useState<string>('');
 
   // Solo Mode State
@@ -290,26 +291,32 @@ export default function Home() {
       />
 
       <main className="flex-1 max-w-xl w-full mx-auto px-4 py-4 flex flex-col gap-5">
-        {/* Top Mode Switcher: Solo vs Battle Multi */}
+        {/* Top Mode Switcher: Solo vs Battle Multi vs Répliques Cultes */}
         <div className="flex items-center justify-center w-full">
-          <div className="bg-zinc-900/90 border border-zinc-800/90 p-1 rounded-2xl flex items-center gap-1 w-full max-w-xs shadow-xl backdrop-blur-md">
+          <div className="bg-zinc-900/90 border border-zinc-800/90 p-1 rounded-2xl flex items-center gap-1 w-full max-w-md shadow-xl backdrop-blur-md">
             <button
               type="button"
-              onClick={() => setMainTab('solo')}
-              className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+              onClick={() => {
+                if (playerRef.current && isPlaying) playerRef.current.pauseSnippet();
+                setMainTab('solo');
+              }}
+              className={`flex-1 py-2 px-2 sm:px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
                 mainTab === 'solo'
                   ? 'bg-zinc-800 text-white shadow-md border border-zinc-700/60'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
               }`}
             >
               <Gamepad2 className="w-3.5 h-3.5 text-zinc-300" />
-              <span>Mode Solo</span>
+              <span>Solo</span>
             </button>
 
             <button
               type="button"
-              onClick={() => setMainTab('battle')}
-              className={`flex-1 py-2 px-3 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+              onClick={() => {
+                if (playerRef.current && isPlaying) playerRef.current.pauseSnippet();
+                setMainTab('battle');
+              }}
+              className={`flex-1 py-2 px-2 sm:px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
                 mainTab === 'battle'
                   ? 'bg-gradient-to-r from-red-600 via-orange-500 to-amber-500 text-zinc-950 shadow-md font-black'
                   : 'text-zinc-400 hover:text-orange-400 hover:bg-zinc-800/40'
@@ -320,10 +327,33 @@ export default function Home() {
                   mainTab === 'battle' ? 'text-zinc-950' : 'text-orange-400'
                 }`}
               />
-              <span>Battle Multi ⚔️</span>
+              <span>Battle</span>
               {mp.isInRoom && (
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (playerRef.current && isPlaying) playerRef.current.pauseSnippet();
+                setMainTab('quotes');
+              }}
+              className={`flex-1 py-2 px-2 sm:px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
+                mainTab === 'quotes'
+                  ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-zinc-950 shadow-md font-black'
+                  : 'text-zinc-400 hover:text-amber-400 hover:bg-zinc-800/40'
+              }`}
+            >
+              <MessageSquareQuote
+                className={`w-3.5 h-3.5 ${
+                  mainTab === 'quotes' ? 'text-zinc-950' : 'text-amber-400'
+                }`}
+              />
+              <span>Répliques</span>
+              <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                NEW
+              </span>
             </button>
           </div>
         </div>
@@ -605,6 +635,17 @@ export default function Home() {
               />
             )}
           </>
+        )}
+
+        {/* ----------------- QUOTES MODE (COMPLÈTE LA RÉPLIQUE) ----------------- */}
+        {mainTab === 'quotes' && (
+          <QuoteGameView
+            volume={volume}
+            isMuted={isMuted}
+            onVolumeChange={handleVolumeChange}
+            onToggleMute={handleToggleMute}
+            onBackToBlindtest={() => setMainTab('solo')}
+          />
         )}
       </main>
 
