@@ -25,6 +25,9 @@ interface Props {
   onVolumeChange: (vol: number) => void;
   onToggleMute: () => void;
   onBackToBlindtest: () => void;
+  customQuestions?: QuoteQuestion[];
+  modeTitle?: string;
+  onOpenDevLab?: () => void;
 }
 
 export function QuoteGameView({
@@ -33,6 +36,9 @@ export function QuoteGameView({
   onVolumeChange,
   onToggleMute,
   onBackToBlindtest,
+  customQuestions,
+  modeTitle,
+  onOpenDevLab,
 }: Props) {
   const [totalQuestions, setTotalQuestions] = useState<number>(10);
   const [questions, setQuestions] = useState<QuoteQuestion[]>([]);
@@ -47,7 +53,12 @@ export function QuoteGameView({
 
   // Initialize game session
   const initGame = useCallback((count = totalQuestions) => {
-    const qList = getRandomQuotes(count);
+    let qList: QuoteQuestion[];
+    if (customQuestions && customQuestions.length > 0) {
+      qList = [...customQuestions].sort(() => 0.5 - Math.random()).slice(0, count);
+    } else {
+      qList = getRandomQuotes(count);
+    }
     setQuestions(qList);
     setCurrentIndex(0);
     setAnswers([]);
@@ -55,7 +66,7 @@ export function QuoteGameView({
     setMaxStreak(0);
     setSelectedOption(null);
     setGameStatus('ready');
-  }, [totalQuestions]);
+  }, [totalQuestions, customQuestions]);
 
   useEffect(() => {
     initGame();
@@ -198,11 +209,11 @@ export function QuoteGameView({
     <div className="w-full flex flex-col gap-4 max-w-lg mx-auto">
       {/* Top Header Card: Level indicator, Session Format & Live Combo */}
       <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 sm:p-4 shadow-xl backdrop-blur-md flex flex-col gap-2.5">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className="px-3 py-1 rounded-xl bg-gradient-to-r from-orange-500/20 to-amber-500/20 border border-orange-500/40 text-orange-400 text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Réplique {currentIndex + 1} / {questions.length}</span>
+              <span>{modeTitle ? modeTitle : `Réplique ${currentIndex + 1} / ${questions.length}`}</span>
             </span>
 
             {/* Streak Combo Badge */}
@@ -214,8 +225,19 @@ export function QuoteGameView({
             )}
           </div>
 
-          {/* Live Score & Mode switcher */}
-          <div className="flex items-center gap-3">
+          {/* Right Side: Dev Lab Button + Format Switcher + Score */}
+          <div className="flex items-center gap-2">
+            {onOpenDevLab && (
+              <button
+                type="button"
+                onClick={onOpenDevLab}
+                className="px-2.5 py-1 rounded-lg bg-purple-950/70 hover:bg-purple-900/80 border border-purple-500/40 text-purple-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
+                title="Ouvrir l'outil de test Dev pour « Les geeks »"
+              >
+                <span>🧪 Lab Dev: Les Geeks</span>
+              </button>
+            )}
+
             <div className="flex items-center bg-zinc-950/80 p-0.5 rounded-lg border border-zinc-800 text-[10px] font-bold">
               <button
                 type="button"
