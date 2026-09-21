@@ -619,18 +619,18 @@ export function GeeksDevLab({
                           </span>
                         )}
                         {!isCorrect && optIdx === 1 && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
-                            2. Même vidéo
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                            2. 1 mot qui change
                           </span>
                         )}
                         {!isCorrect && optIdx === 2 && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                            3. 1 mot qui change
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                            3. Même scène / vidéo
                           </span>
                         )}
                         {!isCorrect && optIdx === 3 && (
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40">
-                            4. Ressemblance
+                            4. Ressemblance stylistique
                           </span>
                         )}
                       </div>
