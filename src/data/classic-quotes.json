@@ -1,5 +1,22 @@
 [
   {
+    "id": "geeks_super_pouvoirs_voler",
+    "videoId": "wzjvKygubsI",
+    "videoTitle": "Cyprien - Les geeks",
+    "contextDescription": "Cyprien parle à sa mère après avoir reçu une chaîne de mails.",
+    "startTime": 106.6,
+    "pauseTime": 111.9,
+    "resumeDuration": 3.4,
+    "setupPhrase": "Maman, j'ai un truc à t'apprendre. T'as des super-pouvoirs. - Ah bon ? - Oui...",
+    "correctPunchline": "Tu sais VOLER !",
+    "options": [
+      "Tu sais VOLER !",
+      "Super informa-ticien !",
+      "Vas-y essaye, saute par la fenêtre !",
+      "J'ai un trombone et une ficelle, tu peux me construire un hélicoptère ?"
+    ]
+  },
+  {
     "id": "cortex_obese_cp",
     "videoId": "dKwzZZKIbUs",
     "videoTitle": "Cyprien répond à Cortex",

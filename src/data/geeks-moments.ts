@@ -5,6 +5,40 @@ export const GEEKS_VIDEO_TITLE = 'Cyprien - Les geeks';
 
 export const GEEKS_TEST_MOMENTS: QuoteQuestion[] = [
   {
+    id: 'geeks_super_pouvoirs_voler',
+    videoId: GEEKS_VIDEO_ID,
+    videoTitle: GEEKS_VIDEO_TITLE,
+    contextDescription: "Cyprien parle à sa mère après avoir reçu une chaîne de mails.",
+    startTime: 106.6,
+    pauseTime: 111.9,
+    resumeDuration: 3.4,
+    setupPhrase: "Maman, j'ai un truc à t'apprendre. T'as des super-pouvoirs. - Ah bon ? - Oui...",
+    correctPunchline: "Tu sais VOLER !",
+    options: [
+      "Tu sais VOLER !",
+      "Super informa-ticien !",
+      "Vas-y essaye, saute par la fenêtre !",
+      "J'ai un trombone et une ficelle, tu peux me construire un hélicoptère ?"
+    ]
+  },
+  {
+    id: 'geeks_saute_fenetre',
+    videoId: GEEKS_VIDEO_ID,
+    videoTitle: GEEKS_VIDEO_TITLE,
+    contextDescription: "La suite immédiate avec le saut par la fenêtre.",
+    startTime: 112.1,
+    pauseTime: 116.8,
+    resumeDuration: 4.2,
+    setupPhrase: "Tu sais VOLER ! Vas-y essaye, saute par la fenêtre. - Euh... d'a... d'accord...",
+    correctPunchline: "Je vooole.",
+    options: [
+      "Je vooole.",
+      "Tu sais VOLER !",
+      "T'as des super-pouvoirs.",
+      "NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOON"
+    ]
+  },
+  {
     id: 'geeks_angry_birds',
     videoId: GEEKS_VIDEO_ID,
     videoTitle: GEEKS_VIDEO_TITLE,
@@ -19,40 +53,6 @@ export const GEEKS_TEST_MOMENTS: QuoteQuestion[] = [
       "Super informa-ticien !",
       "Tu parles à un geek là, allô !",
       "C'est pas ça un geek !"
-    ]
-  },
-  {
-    id: 'geeks_definition',
-    videoId: GEEKS_VIDEO_ID,
-    videoTitle: GEEKS_VIDEO_TITLE,
-    contextDescription: "La vraie définition d'un geek selon Cyprien.",
-    startTime: 17.06,
-    pauseTime: 19.6,
-    resumeDuration: 3.7,
-    setupPhrase: "C'est quelqu'un avant tout de passionné, qui vit pour ses passions,",
-    correctPunchline: "comme la science fiction, les nouvelles technologies, l'informatique.",
-    options: [
-      "comme la science fiction, les nouvelles technologies, l'informatique.",
-      "comme World of Warcraft et les mangas !",
-      "Tu me conseilles quoi d'acheter comme télévision ?",
-      "NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOON"
-    ]
-  },
-  {
-    id: 'geeks_voisin_pc',
-    videoId: GEEKS_VIDEO_ID,
-    videoTitle: GEEKS_VIDEO_TITLE,
-    contextDescription: "Quand quelqu'un utilise un PC à côté de toi.",
-    startTime: 35.28,
-    pauseTime: 40.02,
-    resumeDuration: 2.6,
-    setupPhrase: "T'es un geek quand tu peux pas rester tranquille avec un mec à côté de toi qui utilise un ordinateur...",
-    correctPunchline: "une fois par an.",
-    options: [
-      "une fois par an.",
-      "avec un seul doigt !",
-      "sans souris d'ordinateur.",
-      "...C ah non merde je me suis gouré, comment on efface ?"
     ]
   },
   {
@@ -104,6 +104,40 @@ export const GEEKS_TEST_MOMENTS: QuoteQuestion[] = [
       "J'ai un trombone et une ficelle, tu peux me construire un hélicoptère ?",
       "plutôt que de devoir trier la boîte mail de tes parents.",
       "plutôt que de regarder tes parents envoyer un mail avec un seul doigt."
+    ]
+  },
+  {
+    id: 'geeks_definition',
+    videoId: GEEKS_VIDEO_ID,
+    videoTitle: GEEKS_VIDEO_TITLE,
+    contextDescription: "La vraie définition d'un geek selon Cyprien.",
+    startTime: 17.06,
+    pauseTime: 19.6,
+    resumeDuration: 3.7,
+    setupPhrase: "C'est quelqu'un avant tout de passionné, qui vit pour ses passions,",
+    correctPunchline: "comme la science fiction, les nouvelles technologies, l'informatique.",
+    options: [
+      "comme la science fiction, les nouvelles technologies, l'informatique.",
+      "comme World of Warcraft et les mangas !",
+      "Tu me conseilles quoi d'acheter comme télévision ?",
+      "NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOON"
+    ]
+  },
+  {
+    id: 'geeks_voisin_pc',
+    videoId: GEEKS_VIDEO_ID,
+    videoTitle: GEEKS_VIDEO_TITLE,
+    contextDescription: "Quand quelqu'un utilise un PC à côté de toi.",
+    startTime: 35.28,
+    pauseTime: 40.02,
+    resumeDuration: 2.6,
+    setupPhrase: "T'es un geek quand tu peux pas rester tranquille avec un mec à côté de toi qui utilise un ordinateur...",
+    correctPunchline: "une fois par an.",
+    options: [
+      "une fois par an.",
+      "avec un seul doigt !",
+      "sans souris d'ordinateur.",
+      "...C ah non merde je me suis gouré, comment on efface ?"
     ]
   },
   {
