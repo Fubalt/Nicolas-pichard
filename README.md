@@ -2,75 +2,109 @@
 
 > 🎮 **Jouer en direct : [https://nicolas-pichard.vercel.app](https://nicolas-pichard.vercel.app)**
 
-Une application web interactive de devinette inspirée de **Heardle** et **Framed**, dédiée aux vidéos cultes du créateur **Cyprien**.
-
-## 🎮 Concept & Règles du Jeu
-
-Le joueur doit deviner le titre exact d'une vidéo culte de Cyprien à partir de micro-extraits **vidéo et sonores** de plus en plus longs, tirés à un timecode aléatoire :
-
-- **Essai 1** : `0.1s` (micro-flash vidéo et audio de 100 ms)
-- **Essai 2 (Skip ou Erreur)** : `+2.0s` (total : `2.1s`)
-- **Essai 3 (Skip ou Erreur)** : `+8.0s` (total : `10.1s`)
-- **Essai 4 (Skip ou Erreur)** : `+16.0s` (total : `26.1s`)
-- **Arrêt sur image & Gel** : À chaque palier, la vidéo joue l'extrait puis se **fige automatiquement sur la dernière image**, offrant un indice visuel permanent.
-- **Victoire / Défaite** : Révélation complète de la vidéo (titre, timecode de départ, lecteur vidéo YouTube débloqué pour visionnage libre, partage du score en emojis style Heardle 🟩 🟥 ⬜ ⬛).
+Une application web interactive de devinette et de quiz vidéo dédiée aux vidéos cultes du créateur **Cyprien**, proposant 3 modes de jeu complets : **Blindtest Solo**, **Battle Multijoueur en temps réel**, et le tout nouveau mode **« Complète la réplique »**.
 
 ---
 
-## ⚡ Fonctionnalités Clés
+## 🕹️ Les 3 Modes de Jeu
 
-1. **Lecteur Vidéo Dédié Anti-Triche :**
-   - Recadrage cinéma discret (1.20x) masquant le titre YouTube et le tiroir "Plus de vidéos" sans déformer la scène.
-   - Timer précis coupant la lecture au millième de seconde près selon le palier débloqué.
-   - Maintien sur la dernière image (arrêt sur image) pour fournir un indice visuel permanent.
-   - Déblocage automatique du lecteur officiel en fin de partie (victoire ou défaite).
+### 1. 🎯 Blindtest Solo (Inspiré de Heardle & Framed)
+Devinez le titre exact de la vidéo de Cyprien à partir de micro-extraits vidéo et sonores à timecode aléatoire :
+- **Essai 1** : `0.1s` (micro-flash vidéo et audio de 100 ms)
+- **Essai 2** : `+2.0s` (total : `2.1s`)
+- **Essai 3** : `+8.0s` (total : `10.1s`)
+- **Essai 4** : `+16.0s` (total : `26.1s`)
+- **Arrêt sur image & Gel** : À chaque palier, la vidéo se fige automatiquement sur la dernière frame pour offrir un indice visuel permanent.
+- **Sélection d'époque** :
+  - 🌟 **Toutes les époques** : Catalogue complet (2010 à aujourd'hui).
+  - 📼 **Classique ≤ 2016** : L'âge d'or culte (*Le dessin*, *Les réunions*, *Les vieux et la technologie*, *McDonald's*, etc.).
+- **Partage de score** : Grille d'emojis prête pour Twitter / Discord (🟩 🟥 ⬜ ⬛).
 
-2. **Sélection Aléatoire & Timecode Sécurisé :**
-   - Catalogue complet de **205 vidéos longues** de Cyprien (`data/cyprien-videos.json`), exempt de Shorts (<60s) et d'épisodes de podcast audio.
-   - Génération d'un `startTime` strictement compris entre **5 secondes** et **`(durée_totale - 35 secondes)`** pour éviter les génériques de fin ou les coupures hors vidéo.
+---
 
-3. **Système de Recherche Tolérant & Autocomplétion :**
-   - Champ de recherche intelligent avec racinisation (stemming), tolérance pluriel/singulier, gestion implicite des numéros (ex: "reunions 1" trouve "Les réunions").
-   - Navigation au clavier (`Flèche Haut`, `Flèche Bas`, `Entrée`, `Échap`).
-   - Raccourci clavier universel : Barre d'espace pour lancer / mettre en pause la lecture de l'extrait.
+### 2. ⚔️ Battle Multijoueur (Salons en Temps Réel)
+Défiez vos amis dans des salons de jeu privés :
+- **Création & Rejoindre** : Partage d'un code de salon à 5 lettres ou lien direct d'invitation (`?room=CODE`).
+- **Synchronisation en direct** : Les joueurs découvrent le même extrait vidéo au même moment.
+- **Système de points dynamique** :
+  - Points selon le palier débloqué (1000 pts au 1er essai, 750 au 2e, 500 au 3e, 250 au 4e).
+  - **Bonus de vitesse** : Plus vous répondez vite après le début de l'extrait, plus vous marquez de points supplémentaires.
+- **Récapitulatif de manche & Podium final** : Classement en direct entre chaque round et couronnement du vainqueur.
 
-4. **Timeline & Indicateurs Visuels :**
-   - Barre de progression dynamique divisée selon les 4 paliers de durée (0.1s, 2.1s, 10.1s, 26.1s).
-   - Remplissage visuel en temps réel au rythme de la lecture.
-   - Historique des 4 essais avec statuts (Validé 🟩, Erreur 🟥, Passé ⬜, Restant ⬛).
+---
 
-5. **Interface Moderne & Responsive :**
-   - Dark mode natif (zinc-950/amber/orange).
-   - Explosion de confettis en cas de victoire.
-   - Bouton de partage prêt pour les réseaux sociaux / Discord (`🎬 Nicolas Pichard • X/4`).
-   - Mode partie aléatoire infinie (*"Partie suivante"*).
+### 3. 💬 « Complète la réplique » (Quiz Répliques Culte)
+Le mode punchlines et scènes mémorables :
+- **Mécanique** : La vidéo commence, joue le début de la réplique culte puis se coupe pile avant le mot ou la vanne finale.
+- **QCM 4 choix** : Trouvez la punchline exacte parmi des propositions réalistes et contextualisées.
+- **Révélation vidéo continue** : Dès que vous répondez, la vidéo continue de jouer la scène entière pour vous faire réentendre la phrase exacte dans son flow naturel.
+- **Système de Combo & Flammes** :
+  - Enchaînez les bonnes réponses pour monter votre streak.
+  - Multiplicateurs de combo : **x1.2** (2 d'affilée), **x1.5** (3 d'affilée), **x2.0** (4+ d'affilée).
+- **Formats au choix** : Sessions de **5** ou **10 répliques**.
+
+---
+
+## ⌨️ Raccourcis Clavier Universels
+
+| Touche | Action |
+| :--- | :--- |
+| <kbd>Espace</kbd> | Lancer / Mettre en pause / Réécouter l'extrait |
+| <kbd>1</kbd>, <kbd>2</kbd>, <kbd>3</kbd>, <kbd>4</kbd> | Sélectionner directement une proposition dans le mode Répliques |
+| <kbd>Entrée</kbd> | Passer à la réplique suivante lors de la révélation |
+| <kbd>↑</kbd> / <kbd>↓</kbd> | Naviguer dans les suggestions d'autocomplétion du Blindtest |
+| <kbd>Échap</kbd> | Fermer les suggestions ou la fenêtre de règles |
+
+---
+
+## ⚡ Fonctionnalités Clés & Architecture
+
+1. **Lecteur YouTube Dédié & Sécurisé :**
+   - Recadrage cinéma précis (1.20x) masquant les overlays YouTube sans déformer l'image.
+   - Surveillance d'horloge haute précision via `requestAnimationFrame` + `performance.now()`.
+   - Contrôle du volume indépendant avec mémorisation de l'état muet.
+
+2. **Recherche Intelligente & Tolérante :**
+   - Moteur de recherche avec normalisation Unicode, racinisation lexicale, tolérance pluriel/singulier et accents.
+   - Détection des titres alternatifs et des chiffres implicites (ex : "reunion" → "Les réunions").
+
+3. **Catalogue Vidéos Filtré :**
+   - Extraction automatisée via script dédié (`scripts/fetch-videos.mjs`).
+   - Exclusion stricte des Shorts (<60s) et podcasts sans support vidéo.
+   - Bornage des timecodes pour éviter les intros sponsorisées et génériques de fin.
 
 ---
 
 ## 🛠️ Stack Technique
 
-- **Framework** : [Next.js](https://nextjs.org/) 16 (App Router)
-- **Langage** : TypeScript 5
-- **Design & UI** : Tailwind CSS v4, Lucide React
-- **Animations & Effets** : Canvas-Confetti
-- **Audio / Vidéo** : API YouTube IFrame officielle
+- **Framework** : [Next.js](https://nextjs.org/) 16 (App Router & Turbopack)
+- **Langage** : TypeScript 5 (Typage strict, 0 `any`)
+- **Bibliothèque UI** : React 19 (Conformité stricte au React Compiler)
+- **Styling** : Tailwind CSS v4 & Lucide React
+- **Multijoueur** : Architecture synchronisée temps réel Server-Sent Events / Sockets
+- **Animations** : Canvas-Confetti
 
 ---
 
-## 🌿 Stratégie de Branches (Production vs Dev)
+## 🌿 Stratégie de Branches
 
-- **`main`** : Branche de **Production publique**. Seules les versions validées et stables y sont fusionnées.
-- **`dev`** : Branche de **Développement / Staging**. Toutes les modifications et tests s'effectuent ici avec prévisualisation Vercel privée avant mise en ligne.
+- **`main`** : Branche de **Production publique** déployée sur Vercel.
+- **`dev`** : Branche de **Développement / Intégration** pour tester les fonctionnalités avant publication.
 
 ---
 
-## 🚀 Démarrage Rapide
-
-Dans le dossier du projet :
+## 🚀 Démarrage en Local
 
 ```bash
+# Cloner le dépôt
+git clone https://github.com/Fubalt/Nicolas-pichard.git
+cd Nicolas-pichard
+
+# Installer les dépendances
+npm install
+
 # Lancer le serveur de développement
 npm run dev
 ```
 
-Ouvrez ensuite [http://localhost:3000](http://localhost:3000) dans votre navigateur (ou votre adresse IP locale sur mobile).
+Ouvrez [http://localhost:3000](http://localhost:3000) dans votre navigateur.
