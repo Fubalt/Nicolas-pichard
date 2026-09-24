@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ATTEMPT_DURATIONS, ATTEMPT_INCREMENTS } from '@/constants/game';
-import { Lock, Unlock, Volume2, Volume1, VolumeX } from 'lucide-react';
+import { Lock, Volume2, Volume1, VolumeX } from 'lucide-react';
 
 interface Props {
   currentAttempt: number;
@@ -86,7 +86,6 @@ export function TimelineProgressBar({
       <div className="relative w-full h-4 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800 p-0.5 flex gap-1">
         {ATTEMPT_DURATIONS.map((dur, index) => {
           const isUnlocked = index <= currentAttempt;
-          const isCurrentTier = index === currentAttempt;
           const segmentWidth = segmentWidths[index];
 
           // Compute fill inside this specific segment if current or previous
@@ -99,7 +98,7 @@ export function TimelineProgressBar({
 
           return (
             <div
-              key={index}
+              key={`timeline-${dur}-${index}`}
               className={`relative h-full rounded-sm overflow-hidden transition-all flex items-center justify-center ${
                 isUnlocked
                   ? 'bg-zinc-800/90 border-zinc-700'

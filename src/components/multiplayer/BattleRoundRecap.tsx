@@ -12,7 +12,7 @@ import {
   ExternalLink,
   Crown,
   Clock,
-  Swords,
+  LogOut,
 } from 'lucide-react';
 
 interface Props {
@@ -50,7 +50,6 @@ export function BattleRoundRecap({
   const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
 
   const allPlayersFinished = players.every((p) => p.hasFinishedRound);
-  const me = players.find((p) => p.id === myPlayerId);
 
   const cleanTitle = cleanDisplayTitle(currentRound.video.title);
 
@@ -125,6 +124,7 @@ export function BattleRoundRecap({
         {/* Revealed video card */}
         <div className="flex items-center gap-3 p-3 rounded-2xl bg-zinc-950 border border-zinc-800">
           <div className="w-20 h-14 rounded-xl overflow-hidden bg-zinc-900 shrink-0 relative">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`https://img.youtube.com/vi/${currentRound.video.id}/mqdefault.jpg`}
               alt={cleanTitle}
@@ -134,7 +134,7 @@ export function BattleRoundRecap({
 
           <div className="flex flex-col min-w-0 flex-1">
             <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">
-              C'était la vidéo
+              C&apos;était la vidéo
             </span>
             <span className="font-bold text-sm text-white truncate" title={cleanTitle}>
               {cleanTitle}
@@ -245,10 +245,19 @@ export function BattleRoundRecap({
             <div className="flex flex-col items-center gap-1.5 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-center">
               <div className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping" />
               <span className="text-xs font-semibold text-zinc-300">
-                En attente de l'hôte pour lancer la manche suivante...
+                En attente de l&apos;hôte pour lancer la manche suivante...
               </span>
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={onLeaveRoom}
+            className="w-full py-2 px-3 rounded-xl text-zinc-500 hover:text-zinc-300 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Quitter le salon</span>
+          </button>
         </div>
       </div>
     </div>

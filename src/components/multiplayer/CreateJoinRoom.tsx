@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { GameMode } from '@/types/game';
 import { CYPRIEN_ALL_VIDEOS, CYPRIEN_CLASSIC_VIDEOS } from '@/data/videos';
-import { Users, Swords, Sparkles, History, ArrowLeft, Play, KeyRound, Copy } from 'lucide-react';
+import { Users, Swords, Sparkles, History, ArrowLeft, KeyRound } from 'lucide-react';
 
 interface Props {
   initialRoomCode?: string;
@@ -19,34 +19,32 @@ export function CreateJoinRoom({
   onBackToSolo,
 }: Props) {
   const [tab, setTab] = useState<'create' | 'join'>(initialRoomCode ? 'join' : 'create');
-  const [pseudo, setPseudo] = useState('');
+  const [pseudo, setPseudo] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return localStorage.getItem('np_multiplayer_pseudo') || '';
+      } catch {}
+    }
+    return '';
+  });
   const [roomCode, setRoomCode] = useState(initialRoomCode.toUpperCase());
   const [totalRounds, setTotalRounds] = useState<number>(5);
   const [gameMode, setGameMode] = useState<GameMode>('all');
   const [error, setError] = useState<string | null>(null);
 
-  // Load saved pseudo from localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('np_multiplayer_pseudo');
-      if (saved) {
-        setPseudo(saved);
-      }
-    } catch (e) {}
-  }, []);
-
-  // Sync if initialRoomCode changes
-  useEffect(() => {
+  const [prevInitialCode, setPrevInitialCode] = useState(initialRoomCode);
+  if (initialRoomCode !== prevInitialCode) {
+    setPrevInitialCode(initialRoomCode);
     if (initialRoomCode) {
       setRoomCode(initialRoomCode.toUpperCase());
       setTab('join');
     }
-  }, [initialRoomCode]);
+  }
 
   const savePseudo = (name: string) => {
     try {
       localStorage.setItem('np_multiplayer_pseudo', name.trim());
-    } catch (e) {}
+    } catch {}
   };
 
   const handleCreate = (e: React.FormEvent) => {
@@ -231,7 +229,7 @@ export function CreateJoinRoom({
                     <span className="text-xs font-bold text-white">Classique ≤ 2016</span>
                   </div>
                   <span className="text-[10px] text-zinc-500">
-                    {CYPRIEN_CLASSIC_VIDEOS.length} vidéos d'époque
+                    {CYPRIEN_CLASSIC_VIDEOS.length} vidéos d&apos;époque
                   </span>
                 </button>
               </div>
@@ -269,7 +267,7 @@ export function CreateJoinRoom({
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-3 text-base text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/40 font-mono tracking-widest uppercase transition-all"
               />
               <span className="text-[11px] text-zinc-500">
-                Demande le code à l'ami qui a créé la room.
+                Demande le code à l&apos;ami qui a créé la room.
               </span>
             </div>
 
@@ -296,7 +294,7 @@ export function CreateJoinRoom({
         <ul className="list-disc pl-4 space-y-1 text-zinc-400">
           <li>Tous les joueurs reçoivent <strong className="text-zinc-200">exactement les mêmes vidéos</strong> au même timecode.</li>
           <li><strong className="text-zinc-200">Scoring rapide :</strong> 1 000 pts (1er coup) → 750 → 500 → 250 pts.</li>
-          <li><strong className="text-orange-400">Bonus vitesse :</strong> jusqu'à +200 pts bonus si tu trouves vite !</li>
+          <li><strong className="text-orange-400">Bonus vitesse :</strong> jusqu&apos;à +200 pts bonus si tu trouves vite !</li>
           <li>Le classement se met à jour en direct à chaque manche avec un podium final 🥇.</li>
         </ul>
       </div>

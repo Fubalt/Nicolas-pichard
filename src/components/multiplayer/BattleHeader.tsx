@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { BattlePlayer } from '@/types/multiplayer';
-import { Swords, Trophy, Crown, LogOut, CheckCircle2, Clock } from 'lucide-react';
+import { Swords, Crown, LogOut, CheckCircle2, Clock } from 'lucide-react';
 
 interface Props {
   currentRoundIndex: number;
@@ -21,8 +21,6 @@ export function BattleHeader({
   myPlayerId,
   onLeaveRoom,
 }: Props) {
-  const me = players.find((p) => p.id === myPlayerId);
-
   return (
     <div className="w-full bg-zinc-900/95 border border-zinc-800/90 rounded-2xl p-3 sm:p-4 shadow-xl backdrop-blur-md flex flex-col gap-3">
       {/* Top bar: Round count + Room code + Leave */}

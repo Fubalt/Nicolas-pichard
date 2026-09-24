@@ -29,9 +29,37 @@ export default function Home() {
   const [initialRoomParam, setInitialRoomParam] = useState<string>('');
 
   // Solo Mode State
-  const [gameMode, setGameMode] = useState<GameMode>('all');
-  const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(null);
-  const [startTime, setStartTime] = useState<number>(10);
+  const [gameMode, setGameMode] = useState<GameMode>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('nicolas_pichard_game_mode') as GameMode;
+        if (saved === 'all' || saved === 'classic') return saved;
+      } catch {}
+    }
+    return 'all';
+  });
+
+  const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(() => {
+    let mode: GameMode = 'all';
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('nicolas_pichard_game_mode') as GameMode;
+        if (saved === 'all' || saved === 'classic') mode = saved;
+      } catch {}
+    }
+    return getRandomGameVideo({ mode }).video;
+  });
+
+  const [startTime, setStartTime] = useState<number>(() => {
+    let mode: GameMode = 'all';
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('nicolas_pichard_game_mode') as GameMode;
+        if (saved === 'all' || saved === 'classic') mode = saved;
+      } catch {}
+    }
+    return getRandomGameVideo({ mode }).startTime;
+  });
 
   // Common In-Game State (Shared between Solo & Battle Round)
   const [currentAttempt, setCurrentAttempt] = useState<number>(0);
@@ -59,8 +87,10 @@ export default function Home() {
       const params = new URLSearchParams(window.location.search);
       const roomParam = params.get('room');
       if (roomParam) {
-        setInitialRoomParam(roomParam);
-        setMainTab('battle');
+        queueMicrotask(() => {
+          setInitialRoomParam(roomParam);
+          setMainTab('battle');
+        });
       }
     }
   }, []);
@@ -81,41 +111,30 @@ export default function Home() {
     setSnippetElapsed(0);
   }, [gameMode]);
 
-  // Initialize solo game on mount and restore saved mode if any
-  useEffect(() => {
-    let initialMode: GameMode = 'all';
-    try {
-      const saved = localStorage.getItem('nicolas_pichard_game_mode') as GameMode;
-      if (saved === 'all' || saved === 'classic') {
-        initialMode = saved;
-        setGameMode(saved);
-      }
-    } catch (e) {}
-    startNewSoloGame(initialMode);
-  }, []);
-
   // When battle status enters 'playing', reset round player state
   useEffect(() => {
     if (mainTab === 'battle' && mp.status === 'playing' && mp.currentRound) {
       battleRoundStartTimeRef.current = Date.now();
-      setCurrentAttempt(0);
-      setGameStatus('ready');
-      setGuesses([]);
-      setIsPlaying(false);
-      setSnippetProgress(0);
-      setSnippetElapsed(0);
+      queueMicrotask(() => {
+        setCurrentAttempt(0);
+        setGameStatus('ready');
+        setGuesses([]);
+        setIsPlaying(false);
+        setSnippetProgress(0);
+        setSnippetElapsed(0);
+      });
       if (playerRef.current) {
         playerRef.current.pauseSnippet();
       }
     }
-  }, [mainTab, mp.status, mp.currentRoundIndex]);
+  }, [mainTab, mp.status, mp.currentRoundIndex, mp.currentRound]);
 
   const handleSelectSoloMode = (newMode: GameMode) => {
     if (newMode === gameMode) return;
     setGameMode(newMode);
     try {
       localStorage.setItem('nicolas_pichard_game_mode', newMode);
-    } catch (e) {}
+    } catch {}
     startNewSoloGame(newMode);
   };
 
@@ -149,7 +168,7 @@ export default function Home() {
         : CYPRIEN_ALL_VIDEOS
       : currentSoloCatalog;
 
-  const handleTogglePlay = () => {
+  const handleTogglePlay = useCallback(() => {
     if (!playerRef.current || !activeVideo) return;
     if (gameStatus === 'won' || gameStatus === 'lost') return;
 
@@ -159,7 +178,7 @@ export default function Home() {
       setGameStatus('playing');
       playerRef.current.playSnippet();
     }
-  };
+  }, [activeVideo, gameStatus, isPlaying]);
 
   // Keyboard shortcut: Spacebar to toggle Play/Pause
   useEffect(() => {
@@ -180,7 +199,7 @@ export default function Home() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, gameStatus, playerReady, activeVideo]);
+  }, [handleTogglePlay]);
 
   const handleSkip = () => {
     if (gameStatus === 'won' || gameStatus === 'lost') return;
@@ -484,7 +503,6 @@ export default function Home() {
                   guesses={guesses}
                   gameMode={gameMode}
                   onPlayAgain={() => startNewSoloGame()}
-                  onPlayFullVideo={() => playerRef.current?.playFull()}
                 />
               )
             )}

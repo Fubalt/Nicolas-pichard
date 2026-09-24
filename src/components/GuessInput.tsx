@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { VideoItem } from '@/types/game';
 import { normalizeTitle, matchesSearch, cleanDisplayTitle } from '@/lib/utils';
-import { Search, Send, Film, Check } from 'lucide-react';
+import { Search, Send, Film } from 'lucide-react';
 
 interface Props {
   catalog: VideoItem[];

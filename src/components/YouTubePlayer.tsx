@@ -29,12 +29,7 @@ interface Props {
   isMuted: boolean;
 }
 
-declare global {
-  interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady: () => void;
-  }
-}
+import { YTPlayerInstance, YTPlayerEvent } from '@/types/youtube';
 
 export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTubePlayer(
   {
@@ -53,7 +48,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<any>(null);
+  const playerRef = useRef<YTPlayerInstance | null>(null);
   const [playerReady, setPlayerReady] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string>('');
@@ -67,7 +62,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
         try {
           playerRef.current.seekTo(startTime, true);
           playerRef.current.pauseVideo();
-        } catch (e) {}
+        } catch {}
       }
     }
   }, [videoId, startTime, gameStatus, playerReady]);
@@ -82,20 +77,22 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
         playerRef.current.unMute?.();
         playerRef.current.setVolume?.(volume);
       }
-    } catch (e) {}
+    } catch {}
   }, [volume, isMuted]);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const progressAnimFrameRef = useRef<number | null>(null);
-  const isCurrentlyPlayingRef = useRef<boolean>(false);
+  const isCurrentlyPlayingRef = useRef<boolean>(isPlaying);
 
-  isCurrentlyPlayingRef.current = isPlaying;
+  useEffect(() => {
+    isCurrentlyPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
   const currentMaxDuration = ATTEMPT_DURATIONS[currentAttempt] ?? ATTEMPT_DURATIONS[0];
   const isGameOver = gameStatus === 'won' || gameStatus === 'lost';
 
   // Force disable all subtitles/captions
-  const disableCaptions = useCallback((player: any) => {
+  const disableCaptions = useCallback((player: YTPlayerInstance) => {
     if (!player) return;
     try {
       if (typeof player.unloadModule === 'function') {
@@ -107,7 +104,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
         player.setOption('captions', 'reload', false);
         player.setOption('cc', 'track', {});
       }
-    } catch (e) {}
+    } catch {}
   }, []);
 
   // Stop playback and freeze on current frame (no rewind)
@@ -340,6 +337,67 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
     [playSnippet, pauseSnippet, replaySnippet, playContinuation, playFull, playerReady]
   );
 
+  // Initialize YT.Player
+  const initPlayer = useCallback(() => {
+    if (!containerRef.current || !window.YT) return;
+
+    if (playerRef.current?.destroy) {
+      try {
+        playerRef.current.destroy();
+      } catch {}
+    }
+
+    setPlayerReady(false);
+    setHasError(false);
+
+    try {
+      playerRef.current = new window.YT.Player(containerRef.current, {
+        videoId,
+        width: '100%',
+        height: '100%',
+        playerVars: {
+          autoplay: 0,
+          controls: gameStatus === 'won' || gameStatus === 'lost' ? 1 : 0,
+          disablekb: 1,
+          fs: 0,
+          modestbranding: 1,
+          rel: 0,
+          playsinline: 1,
+          cc_load_policy: 0,
+          cc_lang_pref: 'off',
+          iv_load_policy: 3, // Disables annotations & video end cards
+          hl: 'fr',
+          origin: typeof window !== 'undefined' ? window.location.origin : undefined,
+        },
+        events: {
+          onReady: (event: { target: YTPlayerInstance }) => {
+            setPlayerReady(true);
+            disableCaptions(event.target);
+            try {
+              event.target.seekTo(startTime, true);
+              event.target.pauseVideo();
+            } catch {}
+            onReady?.();
+          },
+          onStateChange: (event: YTPlayerEvent) => {
+            disableCaptions(event.target);
+            if (event.data === 0) {
+              stopPlayback(false);
+            }
+          },
+          onError: (event: YTPlayerEvent) => {
+            console.error('YouTube Player Error:', event.data);
+            setHasError(true);
+            setDebugInfo(`Code d'erreur lecteur YouTube: ${event.data}`);
+          },
+        },
+      });
+    } catch (e: unknown) {
+      console.error('Failed to create YT.Player instance', e);
+      setHasError(true);
+    }
+  }, [videoId, startTime, gameStatus, onReady, stopPlayback, disableCaptions]);
+
   // Load YouTube IFrame API
   useEffect(() => {
     const loadAPI = () => {
@@ -366,71 +424,10 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
       if (playerRef.current?.destroy) {
         try {
           playerRef.current.destroy();
-        } catch (e) {}
+        } catch {}
       }
     };
-  }, [videoId]);
-
-  // Initialize YT.Player
-  const initPlayer = useCallback(() => {
-    if (!containerRef.current || !window.YT) return;
-
-    if (playerRef.current?.destroy) {
-      try {
-        playerRef.current.destroy();
-      } catch (e) {}
-    }
-
-    setPlayerReady(false);
-    setHasError(false);
-
-    try {
-      playerRef.current = new window.YT.Player(containerRef.current, {
-        videoId,
-        width: '100%',
-        height: '100%',
-        playerVars: {
-          autoplay: 0,
-          controls: gameStatus === 'won' || gameStatus === 'lost' ? 1 : 0,
-          disablekb: 1,
-          fs: 0,
-          modestbranding: 1,
-          rel: 0,
-          playsinline: 1,
-          cc_load_policy: 0,
-          cc_lang_pref: 'off',
-          iv_load_policy: 3, // Disables annotations & video end cards
-          hl: 'fr',
-          origin: typeof window !== 'undefined' ? window.location.origin : undefined,
-        },
-        events: {
-          onReady: (event: any) => {
-            setPlayerReady(true);
-            disableCaptions(event.target);
-            try {
-              event.target.seekTo(startTime, true);
-              event.target.pauseVideo();
-            } catch (e) {}
-            onReady?.();
-          },
-          onStateChange: (event: any) => {
-            disableCaptions(event.target);
-            if (event.data === 0) {
-              stopPlayback(false);
-            }
-          },
-          onError: (event: any) => {
-            console.error('YouTube Player Error:', event.data);
-            setHasError(true);
-            setDebugInfo(`Code d'erreur lecteur YouTube: ${event.data}`);
-          },
-        },
-      });
-    } catch (e: any) {
-      console.error('Failed to create YT.Player instance', e);
-      setHasError(true);
-    }
-  }, [videoId, startTime, gameStatus, onReady, stopPlayback, disableCaptions]);
+  }, [videoId, initPlayer]);
 
   return (
     <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-zinc-800 shadow-2xl transition-all select-none group">
@@ -465,7 +462,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
             <Play className="w-7 h-7 fill-white ml-1" />
           </div>
           <span className="text-sm font-bold tracking-wide text-zinc-100 group-hover:text-orange-400 transition-colors">
-            Lancer l'extrait ({currentMaxDuration}s)
+            Lancer l&apos;extrait ({currentMaxDuration}s)
           </span>
           <span className="text-xs text-zinc-400 mt-1 font-mono">
             Cliquer ici ou appuyer sur [Espace]

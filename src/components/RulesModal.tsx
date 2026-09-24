@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, Volume2, HelpCircle, CheckCircle2, Clock } from 'lucide-react';
-import { ATTEMPT_DURATIONS, ATTEMPT_INCREMENTS } from '@/constants/game';
+import { X, HelpCircle } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;

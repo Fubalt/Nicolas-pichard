@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { BattlePlayer, RoomConfig } from '@/types/multiplayer';
-import { Trophy, Crown, Medal, RotateCcw, LogOut, Sparkles } from 'lucide-react';
+import { Trophy, Crown, Medal, RotateCcw, LogOut } from 'lucide-react';
 
 interface Props {
   players: BattlePlayer[];
@@ -204,7 +204,7 @@ export function BattlePodium({
             <div className="flex flex-col items-center gap-1 p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-center">
               <div className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping" />
               <span className="text-xs font-semibold text-zinc-300">
-                En attente que l'hôte relance une battle...
+                En attente que l&apos;hôte relance une battle...
               </span>
             </div>
           )}

@@ -1,4 +1,4 @@
-import { VideoItem, GameMode } from '@/types/game';
+import { GameMode } from '@/types/game';
 import { CYPRIEN_ALL_VIDEOS, CYPRIEN_CLASSIC_VIDEOS } from '@/data/videos';
 import { BattleRound } from '@/types/multiplayer';
 

@@ -19,8 +19,8 @@ import classicQuotesData from './classic-quotes.json';
 export const CYPRIEN_QUOTES: QuoteQuestion[] = classicQuotesData as QuoteQuestion[];
 
 // Memory tracking of previously played quote IDs across rounds to eliminate repetition
-let lastPlayedQuoteIds: Set<string> = new Set();
-let lastTimecodeByVideo: Map<string, number> = new Map();
+const lastPlayedQuoteIds: Set<string> = new Set();
+const lastTimecodeByVideo: Map<string, number> = new Map();
 
 /**
  * Intelligent Anti-Repetition Picker:

@@ -14,7 +14,6 @@ interface Props {
   guesses: GuessResult[];
   gameMode?: GameMode;
   onPlayAgain: () => void;
-  onPlayFullVideo?: () => void;
 }
 
 export function EndGameCard({
@@ -24,7 +23,6 @@ export function EndGameCard({
   guesses,
   gameMode = 'all',
   onPlayAgain,
-  onPlayFullVideo,
 }: Props) {
   const [copied, setCopied] = useState(false);
   const isWon = gameStatus === 'won';
@@ -39,7 +37,7 @@ export function EndGameCard({
           origin: { y: 0.6 },
           colors: ['#f97316', '#eab308', '#22c55e', '#3b82f6', '#ec4899'],
         });
-      } catch (e) {}
+      } catch {}
     }
   }, [isWon]);
 
@@ -63,11 +61,13 @@ export function EndGameCard({
 
   const handleShare = async () => {
     const text = generateShareText();
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch {}
   };
 
   const successfulAttempt = guesses.findIndex((g) => g.type === 'success');

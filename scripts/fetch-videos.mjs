@@ -148,7 +148,7 @@ async function fetchFromChannel() {
         videoMap.set(v.id, v);
       }
       token = JSON.stringify(postData).match(/"continuationCommand":\{"token":"([^"]+)"/)?.[1];
-    } catch (err) {
+    } catch {
       break;
     }
   }

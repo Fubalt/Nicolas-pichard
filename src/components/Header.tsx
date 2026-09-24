@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { HelpCircle, Sparkles, RefreshCw } from 'lucide-react';
+import { HelpCircle, RefreshCw } from 'lucide-react';
 
 interface Props {
   onOpenRules: () => void;

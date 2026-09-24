@@ -3,7 +3,7 @@
 import React from 'react';
 import { GameStatus } from '@/types/game';
 import { ATTEMPT_DURATIONS, ATTEMPT_INCREMENTS } from '@/constants/game';
-import { Play, Pause, RotateCcw, FastForward, Flag } from 'lucide-react';
+import { Play, Pause, FastForward, Flag } from 'lucide-react';
 
 interface Props {
   currentAttempt: number;

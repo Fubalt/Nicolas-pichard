@@ -8,7 +8,8 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
-import { Play, RotateCcw, Pause, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { Play, RotateCcw, Pause, Sparkles } from 'lucide-react';
+import { YTPlayerInstance, YTPlayerEvent } from '@/types/youtube';
 
 export interface QuotePlayerRef {
   playSetup: () => void;
@@ -48,7 +49,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<any>(null);
+  const playerRef = useRef<YTPlayerInstance | null>(null);
 
   // Runtime guarantee: setup always has at least 3.8s breathing room
   const effectiveStartTime = Math.max(0, pauseTime - Math.max(3.8, pauseTime - startTime));
@@ -109,11 +110,11 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
         playerRef.current.unMute?.();
         playerRef.current.setVolume?.(volume);
       }
-    } catch (e) {}
+    } catch {}
   }, [volume, isMuted]);
 
   // Disable subtitles / captions aggressively
-  const disableCaptions = useCallback((player: any) => {
+  const disableCaptions = useCallback((player: YTPlayerInstance) => {
     if (!player) return;
     try {
       if (typeof player.unloadModule === 'function') {
@@ -125,7 +126,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
         player.setOption('captions', 'reload', false);
         player.setOption('cc', 'track', {});
       }
-    } catch (e) {}
+    } catch {}
   }, []);
 
   // Internal monitoring loop using performance.now() and getCurrentTime() while video is PLAYING
@@ -166,7 +167,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
               if (reachedPauseTimestamp) {
                 try {
                   playerRef.current.pauseVideo();
-                } catch (e) {}
+                } catch {}
                 setIsPlaying(false);
                 setProgress(1);
                 clearTimers();
@@ -188,7 +189,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
             // Video is buffering or paused, keep clock aligned
             lastTimeCheckRef.current = performance.now();
           }
-        } catch (e) {}
+        } catch {}
 
         animFrameRef.current = requestAnimationFrame(loop);
       };
@@ -202,7 +203,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
           if (playerRef.current && typeof playerRef.current.pauseVideo === 'function') {
             try {
               playerRef.current.pauseVideo();
-            } catch (e) {}
+            } catch {}
           }
           setIsPlaying(false);
           setProgress(1);
@@ -242,7 +243,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
         setPhase('setup_paused');
         onPauseReached();
       });
-    } catch (e) {}
+    } catch {}
   }, [effectiveStartTime, pauseTime, volume, isMuted, disableCaptions, startMonitoring, onPauseReached]);
 
   // Replay the setup snippet from the start
@@ -266,7 +267,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
         setPhase('setup_paused');
         onPauseReached();
       });
-    } catch (e) {}
+    } catch {}
   }, [disableCaptions, startMonitoring, onPauseReached]);
 
   // Reveal the punchline and continue playing the scene continuously!
@@ -295,7 +296,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
       startMonitoring('reveal', duration, () => {
         onRevealFinished();
       });
-    } catch (e) {}
+    } catch {}
   }, [pauseTime, resumeDuration, volume, isMuted, disableCaptions, startMonitoring, onRevealFinished]);
 
   // Replay from the beginning of the setup phrase and keep playing continuously through the punchline
@@ -324,13 +325,8 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
       startMonitoring('reveal', totalDuration, () => {
         onRevealFinished();
       });
-    } catch (e) {}
+    } catch {}
   }, [effectiveStartTime, pauseTime, resumeDuration, volume, isMuted, disableCaptions, startMonitoring, onRevealFinished]);
-
-  // Replay punchline reveal
-  const replayReveal = useCallback(() => {
-    revealPunchline();
-  }, [revealPunchline]);
 
   // Pause whatever is currently playing
   const pause = useCallback(() => {
@@ -338,7 +334,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
     if (playerRef.current && typeof playerRef.current.pauseVideo === 'function') {
       try {
         playerRef.current.pauseVideo();
-      } catch (e) {}
+      } catch {}
     }
     setIsPlaying(false);
     showCenterIconFeedback('pause');
@@ -377,7 +373,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
             playerRef.current.playVideo();
             setIsPlaying(true);
             showCenterIconFeedback('play');
-          } catch (e) {}
+          } catch {}
         }
       }
       return;
@@ -434,7 +430,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
           origin: typeof window !== 'undefined' ? window.location.origin : undefined,
         },
         events: {
-          onReady: (event: any) => {
+          onReady: (event: { target: YTPlayerInstance }) => {
             if (isCancelled) return;
             setIsReady(true);
             disableCaptions(event.target);
@@ -457,30 +453,30 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
                 event.target.seekTo(effectiveStartTime, false);
                 event.target.pauseVideo();
               }
-            } catch (e) {}
+            } catch {}
 
             onReady?.();
           },
-          onStateChange: (event: any) => {
+          onStateChange: (event: YTPlayerEvent) => {
             if (isCancelled) return;
 
             // IRONCLAD AUTOPLAY PROTECTION:
             // If YouTube attempts to play before the user explicitly clicked play,
             // intercept immediately, force-pause and rewind to effectiveStartTime.
-            if (event.data === window.YT.PlayerState.PLAYING) {
+            if (event.data === window.YT?.PlayerState?.PLAYING) {
               if (!userHasClickedPlayRef.current) {
                 try {
                   event.target.pauseVideo();
                   event.target.seekTo(effectiveStartTime, false);
-                } catch (e) {}
+                } catch {}
                 setIsPlaying(false);
                 return;
               }
               setIsPlaying(true);
               disableCaptions(event.target);
             } else if (
-              event.data === window.YT.PlayerState.PAUSED ||
-              event.data === window.YT.PlayerState.ENDED
+              event.data === window.YT?.PlayerState?.PAUSED ||
+              event.data === window.YT?.PlayerState?.ENDED
             ) {
               setIsPlaying(false);
             }
@@ -511,10 +507,10 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
       if (playerRef.current && typeof playerRef.current.destroy === 'function') {
         try {
           playerRef.current.destroy();
-        } catch (e) {}
+        } catch {}
       }
     };
-  }, [videoId, effectiveStartTime, disableCaptions]);
+  }, [videoId, effectiveStartTime, disableCaptions, volume, isMuted, onReady]);
 
   return (
     <div className="relative w-full aspect-video rounded-2xl sm:rounded-3xl overflow-hidden bg-black border border-zinc-800 shadow-2xl select-none group">
@@ -548,7 +544,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
             <Play className="w-8 h-8 fill-zinc-950 ml-1" />
           </div>
           <span className="text-sm font-bold text-white group-hover:text-orange-400 transition-colors">
-            Lancer l'extrait
+            Lancer l&apos;extrait
           </span>
           <span className="text-xs text-zinc-400 font-mono">
             Cliquer ici ou appuyer sur [Espace]
@@ -561,7 +557,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
         {phase === 'setup_playing' && (
           <>
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <span className="text-amber-300 font-medium">Écoute l'amorce...</span>
+            <span className="text-amber-300 font-medium">Écoute l&apos;amorce...</span>
           </>
         )}
         {phase === 'setup_paused' && (

@@ -19,8 +19,6 @@ export function GuessHistory({ guesses, currentAttempt, gameStatus }: Props) {
       {ATTEMPT_DURATIONS.map((duration, index) => {
         const guess = guesses[index];
         const isCurrent = !isGameOver && index === currentAttempt;
-        const isPast = index < currentAttempt || (isGameOver && guess);
-        const isPending = !isPast && !isCurrent;
 
         let statusBg = 'bg-zinc-900/50 border-zinc-800/80 text-zinc-500';
         let icon = <Minus className="w-4 h-4 text-zinc-700" />;

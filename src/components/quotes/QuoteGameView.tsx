@@ -39,7 +39,18 @@ export function QuoteGameView({
   modeTitle,
 }: Props) {
   const [totalQuestions, setTotalQuestions] = useState<number>(10);
-  const [questions, setQuestions] = useState<QuoteQuestion[]>([]);
+  const [questions, setQuestions] = useState<QuoteQuestion[]>(() => {
+    if (customQuestions && customQuestions.length > 0) {
+      return [...customQuestions]
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 10)
+        .map((q) => ({
+          ...q,
+          options: [...q.options].sort(() => 0.5 - Math.random()),
+        }));
+    }
+    return getRandomQuotes(10);
+  });
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [gameStatus, setGameStatus] = useState<QuoteGameStatus>('ready');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -71,10 +82,6 @@ export function QuoteGameView({
     setSelectedOption(null);
     setGameStatus('ready');
   }, [totalQuestions, customQuestions]);
-
-  useEffect(() => {
-    initGame();
-  }, [initGame]);
 
   const currentQuestion: QuoteQuestion | undefined = questions[currentIndex];
 
@@ -447,7 +454,7 @@ export function QuoteGameView({
                     <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
                     <div>
                       <span className="font-black text-sm block">
-                        C'est la bonne réplique !
+                        C&apos;est la bonne réplique !
                       </span>
                       <span className="text-[11px] text-emerald-300">
                         {currentStreak >= 2

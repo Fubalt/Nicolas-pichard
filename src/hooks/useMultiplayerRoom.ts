@@ -37,19 +37,21 @@ export function useMultiplayerRoom() {
   } | null>(null);
 
   const eventSourceRef = useRef<EventSource | null>(null);
-  const myPlayerIdRef = useRef<string>('');
-  const isHostRef = useRef<boolean>(false);
-  const roomConfigRef = useRef<RoomConfig | null>(null);
-  const playersRef = useRef<BattlePlayer[]>([]);
-  const statusRef = useRef<RoomStatus>('lobby');
-  const currentRoundIndexRef = useRef<number>(0);
+  const myPlayerIdRef = useRef<string>(myPlayerId);
+  const isHostRef = useRef<boolean>(isHost);
+  const roomConfigRef = useRef<RoomConfig | null>(roomConfig);
+  const playersRef = useRef<BattlePlayer[]>(players);
+  const statusRef = useRef<RoomStatus>(status);
+  const currentRoundIndexRef = useRef<number>(currentRoundIndex);
 
-  myPlayerIdRef.current = myPlayerId;
-  isHostRef.current = isHost;
-  roomConfigRef.current = roomConfig;
-  playersRef.current = players;
-  statusRef.current = status;
-  currentRoundIndexRef.current = currentRoundIndex;
+  useEffect(() => {
+    myPlayerIdRef.current = myPlayerId;
+    isHostRef.current = isHost;
+    roomConfigRef.current = roomConfig;
+    playersRef.current = players;
+    statusRef.current = status;
+    currentRoundIndexRef.current = currentRoundIndex;
+  }, [myPlayerId, isHost, roomConfig, players, status, currentRoundIndex]);
 
   const processedRoundsRef = useRef<Set<string>>(new Set());
 
@@ -216,7 +218,11 @@ export function useMultiplayerRoom() {
             const action: MultiplayerAction = JSON.parse(data.message);
             handleAction(action);
           }
-        } catch (e) {}
+        } catch {}
+      };
+
+      es.onerror = () => {
+        // SSE reconnects automatically on network hiccups
       };
 
       eventSourceRef.current = es;
@@ -233,7 +239,7 @@ export function useMultiplayerRoom() {
                 const action: MultiplayerAction = JSON.parse(data.message);
                 handleAction(action);
               }
-            } catch (err) {}
+            } catch {}
           }
         })
         .catch(() => {});

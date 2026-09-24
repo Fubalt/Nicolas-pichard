@@ -1,7 +1,14 @@
 import cyprienVideosRaw from '../../data/cyprien-videos.json';
 import { VideoItem, GameMode } from '@/types/game';
 
-export const CYPRIEN_ALL_VIDEOS: VideoItem[] = (cyprienVideosRaw as any[]).map((v) => ({
+interface RawVideoItem {
+  id: string;
+  title: string;
+  duration?: number;
+  durationInSeconds?: number;
+}
+
+export const CYPRIEN_ALL_VIDEOS: VideoItem[] = (cyprienVideosRaw as RawVideoItem[]).map((v) => ({
   id: v.id,
   title: v.title,
   duration: v.duration ?? v.durationInSeconds ?? 0,
