@@ -42,6 +42,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
     onReady,
     isPlaying,
     setIsPlaying,
+    onTogglePlay,
     volume,
     isMuted,
   },
@@ -53,6 +54,22 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
   const [hasError, setHasError] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string>('');
   const [hasEverPlayed, setHasEverPlayed] = useState(false);
+
+  const onProgressUpdateRef = useRef(onProgressUpdate);
+  const onSnippetEndRef = useRef(onSnippetEnd);
+  const onReadyRef = useRef(onReady);
+
+  useEffect(() => {
+    onProgressUpdateRef.current = onProgressUpdate;
+  }, [onProgressUpdate]);
+
+  useEffect(() => {
+    onSnippetEndRef.current = onSnippetEnd;
+  }, [onSnippetEnd]);
+
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
 
   // Reset standby screen and seek player whenever a new game or startTime is set
   useEffect(() => {
@@ -130,8 +147,8 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
     }
 
     setIsPlaying(false);
-    onProgressUpdate?.(0, 0);
-  }, [startTime, setIsPlaying, onProgressUpdate]);
+    onProgressUpdateRef.current?.(0, 0);
+  }, [startTime, setIsPlaying]);
 
   // Play snippet of current tier starting from startTime
   const playSnippet = useCallback(() => {
@@ -157,7 +174,9 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
       setIsPlaying(true);
 
       const maxDuration = currentMaxDuration;
-      let playbackStartTime: number | null = null;
+      let elapsedPlayTime = 0;
+      let lastCheckTime = performance.now();
+      let hasCompleted = false;
 
       const checkProgress = () => {
         if (!playerRef.current) return;
@@ -168,21 +187,27 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
           if (state === 1) {
             disableCaptions(playerRef.current);
 
-            if (playbackStartTime === null) {
-              playbackStartTime = performance.now();
-            }
+            const now = performance.now();
+            const delta = (now - lastCheckTime) / 1000;
+            lastCheckTime = now;
+            elapsedPlayTime += delta;
 
-            const elapsedSec = (performance.now() - playbackStartTime) / 1000;
-            const progress = Math.min(1, elapsedSec / maxDuration);
-            onProgressUpdate?.(progress, elapsedSec);
+            const progress = Math.min(1, elapsedPlayTime / maxDuration);
+            onProgressUpdateRef.current?.(progress, elapsedPlayTime);
 
             // Cut off strictly at the allocated duration and freeze frame
-            if (elapsedSec >= maxDuration) {
-              stopPlayback(false);
-              onProgressUpdate?.(1, maxDuration);
-              onSnippetEnd?.();
+            if (elapsedPlayTime >= maxDuration) {
+              if (!hasCompleted) {
+                hasCompleted = true;
+                stopPlayback(false);
+                onProgressUpdateRef.current?.(1, maxDuration);
+                onSnippetEndRef.current?.();
+              }
               return;
             }
+          } else {
+            // Keep clock aligned while buffering or paused
+            lastCheckTime = performance.now();
           }
         } catch (err) {
           console.error(err);
@@ -193,17 +218,20 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
 
       progressAnimFrameRef.current = requestAnimationFrame(checkProgress);
 
-      // Fallback safety timeout (tight cutoff to guarantee stop)
-      const safetyTimeoutMs = Math.ceil(maxDuration * 1000 + 350);
+      // Generous safety timeout fallback in case animation frames stall (e.g. background tab)
+      const safetyTimeoutMs = Math.ceil((maxDuration + 6) * 1000);
       timerRef.current = setTimeout(() => {
-        stopPlayback(false);
-        onProgressUpdate?.(1, maxDuration);
-        onSnippetEnd?.();
+        if (!hasCompleted) {
+          hasCompleted = true;
+          stopPlayback(false);
+          onProgressUpdateRef.current?.(1, maxDuration);
+          onSnippetEndRef.current?.();
+        }
       }, safetyTimeoutMs);
     } catch (err) {
       console.error('Failed to play video snippet:', err);
     }
-  }, [playerReady, startTime, currentMaxDuration, setIsPlaying, onProgressUpdate, onSnippetEnd, stopPlayback, disableCaptions, isMuted, volume]);
+  }, [playerReady, startTime, currentMaxDuration, setIsPlaying, stopPlayback, disableCaptions, isMuted, volume]);
 
   // Play full video continuously when game ends
   const playFull = useCallback(() => {
@@ -262,7 +290,9 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
         playerRef.current.playVideo();
         setIsPlaying(true);
 
-        let playbackStartTime: number | null = null;
+        let elapsedAdditional = 0;
+        let lastCheckTime = performance.now();
+        let hasCompleted = false;
 
         const checkProgress = () => {
           if (!playerRef.current) return;
@@ -273,22 +303,27 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
             if (state === 1) {
               disableCaptions(playerRef.current);
 
-              if (playbackStartTime === null) {
-                playbackStartTime = performance.now();
-              }
+              const now = performance.now();
+              const delta = (now - lastCheckTime) / 1000;
+              lastCheckTime = now;
+              elapsedAdditional += delta;
 
-              const elapsedSec = (performance.now() - playbackStartTime) / 1000;
-              const totalElapsedInTier = actualFrom + Math.min(additionalDuration, elapsedSec);
+              const totalElapsedInTier = actualFrom + Math.min(additionalDuration, elapsedAdditional);
               const progress = Math.min(1, totalElapsedInTier / toDuration);
-              onProgressUpdate?.(progress, totalElapsedInTier);
+              onProgressUpdateRef.current?.(progress, totalElapsedInTier);
 
               // Freeze immediately when the additional seconds have elapsed
-              if (elapsedSec >= additionalDuration) {
-                stopPlayback(false);
-                onProgressUpdate?.(1, toDuration);
-                onSnippetEnd?.();
+              if (elapsedAdditional >= additionalDuration) {
+                if (!hasCompleted) {
+                  hasCompleted = true;
+                  stopPlayback(false);
+                  onProgressUpdateRef.current?.(1, toDuration);
+                  onSnippetEndRef.current?.();
+                }
                 return;
               }
+            } else {
+              lastCheckTime = performance.now();
             }
           } catch (err) {
             console.error(err);
@@ -299,12 +334,14 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
 
         progressAnimFrameRef.current = requestAnimationFrame(checkProgress);
 
-        // Safety timeout strictly based on additionalDuration + small margin
-        const safetyTimeoutMs = Math.ceil(additionalDuration * 1000 + 350);
+        const safetyTimeoutMs = Math.ceil((additionalDuration + 6) * 1000);
         timerRef.current = setTimeout(() => {
-          stopPlayback(false);
-          onProgressUpdate?.(1, toDuration);
-          onSnippetEnd?.();
+          if (!hasCompleted) {
+            hasCompleted = true;
+            stopPlayback(false);
+            onProgressUpdateRef.current?.(1, toDuration);
+            onSnippetEndRef.current?.();
+          }
         }, safetyTimeoutMs);
       } catch (err) {
         console.error('Failed to play continuation snippet:', err);
@@ -318,8 +355,6 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
       volume,
       disableCaptions,
       stopPlayback,
-      onProgressUpdate,
-      onSnippetEnd,
       setIsPlaying,
     ]
   );
@@ -339,7 +374,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
 
   // Initialize YT.Player
   const initPlayer = useCallback(() => {
-    if (!containerRef.current || !window.YT) return;
+    if (!containerRef.current || !window.YT || !window.YT.Player) return;
 
     if (playerRef.current?.destroy) {
       try {
@@ -351,13 +386,20 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
     setHasError(false);
 
     try {
-      playerRef.current = new window.YT.Player(containerRef.current, {
+      containerRef.current.innerHTML = '';
+      const iframeDiv = document.createElement('div');
+      iframeDiv.id = `yt-player-${Math.random().toString(36).substring(2, 9)}`;
+      iframeDiv.style.width = '100%';
+      iframeDiv.style.height = '100%';
+      containerRef.current.appendChild(iframeDiv);
+
+      playerRef.current = new window.YT.Player(iframeDiv.id, {
         videoId,
         width: '100%',
         height: '100%',
         playerVars: {
           autoplay: 0,
-          controls: gameStatus === 'won' || gameStatus === 'lost' ? 1 : 0,
+          controls: 0,
           disablekb: 1,
           fs: 0,
           modestbranding: 1,
@@ -377,7 +419,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
               event.target.seekTo(startTime, true);
               event.target.pauseVideo();
             } catch {}
-            onReady?.();
+            onReadyRef.current?.();
           },
           onStateChange: (event: YTPlayerEvent) => {
             disableCaptions(event.target);
@@ -396,10 +438,12 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
       console.error('Failed to create YT.Player instance', e);
       setHasError(true);
     }
-  }, [videoId, startTime, gameStatus, onReady, stopPlayback, disableCaptions]);
+  }, [videoId, startTime, disableCaptions, stopPlayback]);
 
   // Load YouTube IFrame API
   useEffect(() => {
+    let isCancelled = false;
+
     const loadAPI = () => {
       if (!window.YT) {
         const tag = document.createElement('script');
@@ -412,13 +456,18 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
     if (window.YT && window.YT.Player) {
       initPlayer();
     } else {
+      const prevOnReady = window.onYouTubeIframeAPIReady;
       window.onYouTubeIframeAPIReady = () => {
-        initPlayer();
+        prevOnReady?.();
+        if (!isCancelled) {
+          initPlayer();
+        }
       };
       loadAPI();
     }
 
     return () => {
+      isCancelled = true;
       if (timerRef.current) clearTimeout(timerRef.current);
       if (progressAnimFrameRef.current) cancelAnimationFrame(progressAnimFrameRef.current);
       if (playerRef.current?.destroy) {
@@ -455,7 +504,13 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
       */}
       {!hasEverPlayed && !isGameOver && (
         <div
-          onClick={playSnippet}
+          onClick={() => {
+            if (onTogglePlay) {
+              onTogglePlay();
+            } else {
+              playSnippet();
+            }
+          }}
           className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-zinc-950/85 backdrop-blur-md cursor-pointer transition-all hover:bg-zinc-950/75 group"
         >
           <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-orange-600 to-amber-500 flex items-center justify-center text-white shadow-xl shadow-orange-500/25 group-hover:scale-110 transition-transform mb-3">
@@ -476,7 +531,13 @@ export const YouTubePlayer = forwardRef<YouTubePlayerRef, Props>(function YouTub
           {/* Tap video to replay when frozen */}
           {!isPlaying && (
             <div
-              onClick={playSnippet}
+              onClick={() => {
+                if (onTogglePlay) {
+                  onTogglePlay();
+                } else {
+                  playSnippet();
+                }
+              }}
               className="absolute inset-0 z-10 cursor-pointer flex items-center justify-center pointer-events-auto"
               title="Cliquer pour rejouer l'extrait"
             >

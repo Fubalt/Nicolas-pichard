@@ -29,17 +29,7 @@ export default function Home() {
   const [initialRoomParam, setInitialRoomParam] = useState<string>('');
 
   // Solo Mode State
-  const [gameMode, setGameMode] = useState<GameMode>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('nicolas_pichard_game_mode') as GameMode;
-        if (saved === 'all' || saved === 'classic') return saved;
-      } catch {}
-    }
-    return 'all';
-  });
-
-  const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(() => {
+  const [initialSolo] = useState(() => {
     let mode: GameMode = 'all';
     if (typeof window !== 'undefined') {
       try {
@@ -47,19 +37,13 @@ export default function Home() {
         if (saved === 'all' || saved === 'classic') mode = saved;
       } catch {}
     }
-    return getRandomGameVideo({ mode }).video;
+    const initial = getRandomGameVideo({ mode });
+    return { mode, video: initial.video, startTime: initial.startTime };
   });
 
-  const [startTime, setStartTime] = useState<number>(() => {
-    let mode: GameMode = 'all';
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('nicolas_pichard_game_mode') as GameMode;
-        if (saved === 'all' || saved === 'classic') mode = saved;
-      } catch {}
-    }
-    return getRandomGameVideo({ mode }).startTime;
-  });
+  const [gameMode, setGameMode] = useState<GameMode>(() => initialSolo.mode);
+  const [currentVideo, setCurrentVideo] = useState<VideoItem | null>(() => initialSolo.video);
+  const [startTime, setStartTime] = useState<number>(() => initialSolo.startTime);
 
   // Common In-Game State (Shared between Solo & Battle Round)
   const [currentAttempt, setCurrentAttempt] = useState<number>(0);
@@ -109,6 +93,7 @@ export default function Home() {
     setIsPlaying(false);
     setSnippetProgress(0);
     setSnippetElapsed(0);
+    setPlayerReady(false);
   }, [gameMode]);
 
   // When battle status enters 'playing', reset round player state

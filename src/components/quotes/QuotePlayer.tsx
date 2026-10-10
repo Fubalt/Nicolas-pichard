@@ -75,6 +75,22 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
   const safetyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const iconTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const onReadyRef = useRef(onReady);
+  const volumeRef = useRef(volume);
+  const isMutedRef = useRef(isMuted);
+
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
+
+  useEffect(() => {
+    volumeRef.current = volume;
+  }, [volume]);
+
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
+
   // Track playback time elapsed within current segment
   const elapsedPlayTimeRef = useRef<number>(0);
   const lastTimeCheckRef = useRef<number>(0);
@@ -436,11 +452,11 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
             disableCaptions(event.target);
 
             try {
-              if (isMuted) {
+              if (isMutedRef.current) {
                 event.target.mute();
               } else {
                 event.target.unMute();
-                event.target.setVolume(volume);
+                event.target.setVolume(volumeRef.current);
               }
 
               // Pre-cue video parked at effectiveStartTime. Strictly prevent autoplay.
@@ -455,7 +471,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
               }
             } catch {}
 
-            onReady?.();
+            onReadyRef.current?.();
           },
           onStateChange: (event: YTPlayerEvent) => {
             if (isCancelled) return;
@@ -510,7 +526,7 @@ export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlaye
         } catch {}
       }
     };
-  }, [videoId, effectiveStartTime, disableCaptions, volume, isMuted, onReady]);
+  }, [videoId, effectiveStartTime, disableCaptions]);
 
   return (
     <div className="relative w-full aspect-video rounded-2xl sm:rounded-3xl overflow-hidden bg-black border border-zinc-800 shadow-2xl select-none group">
