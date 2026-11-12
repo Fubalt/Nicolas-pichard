@@ -60,7 +60,7 @@ Le site (Next 16 / React 19 / Tailwind 4, sur Vercel) propose trois modes autour
 
 ## 2. Contraintes YouTube — vérification obligatoire avant toute décision de lecture
 
-**État actuel : non vérifié.** Les sources officielles n'ont pas pu être consultées depuis cette session (`developers.google.com` est hors des domaines réseau autorisés). Rien ci-dessous n'est tenu pour acquis.
+**État : vérifié le 2026-11-12, voir [`docs/YOUTUBE_CONSTRAINTS.md`](./YOUTUBE_CONSTRAINTS.md)** (citations officielles, conformité de l'existant, options A / B / C). Point clé : la page Required Minimum Functionality interdit tout overlay devant le lecteur et toute modification non documentée. Le recadrage et les surcouches actuels ne sont donc pas conformes. Le texte ci-dessous est la version initiale de cette section, conservée pour l'historique.
 
 **Étape 1a (bloquante pour l'étape 2)** : lire et **citer mot pour mot**, avec URL et date de consultation, dans `docs/YOUTUBE_CONSTRAINTS.md` :
 - YouTube API Services — Developer Policies (`developers.google.com/youtube/terms/developer-policies`) ;
