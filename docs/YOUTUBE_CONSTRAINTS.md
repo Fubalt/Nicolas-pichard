@@ -154,3 +154,52 @@ Non conforme aux règles citées en §1.1 (voir §2). Risque : suspension de l'a
 3. L'option C est indépendante : à toi de voir si tu veux la tenter en parallèle.
 
 Rien de ceci n'est implémenté tant que tu n'as pas choisi.
+
+---
+
+## 6. Résultats des essais réels (2026-11-12)
+
+Les essais ont été faits avec la sonde `public/labo/youtube-probe.html` (prévisualisation Vercel de la branche), sur la vidéo « Cyprien - Les geeks » (`wzjvKygubsI`), départ demandé à 106,600 s, son activé. Sources : deux rapports Chrome 157 sur Mac (un essai piloté, un essai manuel), un rapport Safari 27 sur Mac, un rapport Safari iOS 18.7 sur iPhone (lecteur de 328 × 200 px).
+
+### 6.1 Visibilité du titre (réponse §3, questions 1-2)
+
+| État | `controls=0` | `controls=1` |
+|---|---|---|
+| Avant toute lecture | Titre, chaîne et miniature visibles (la miniature affiche « LES GEEKS ») | Idem |
+| Pendant un extrait court | Titre visible (rapport manuel). Il disparaît après quelques secondes de lecture continue sans survol (rapport piloté) | Idem, avec la barre de progression au survol |
+| Pause automatique après une coupure | Titre visible sans survol | Idem |
+| État « terminé » (`endSeconds`) | Titre, miniature, bouton de relecture, « Plus de vidéos » | Idem |
+
+**Conclusion :** avec un lecteur conforme, le titre est visible au chargement, pendant les extraits courts, en pause et à la fin. **L'option A est exclue pour le Blindtest et le Battle. L'option B ne protège pas les premiers paliers.** L'option A reste valable pour le mode Répliques.
+
+### 6.2 Précision et latence
+
+| Mesure | Résultat |
+|---|---|
+| Coupure sur le temps vidéo (`getCurrentTime` à chaque trame puis `pauseVideo`) | Fin à +1 à +21 ms de la borne (Chrome, Safari Mac, iPhone) |
+| Coupure sur l'horloge (méthode actuelle du site) | Environ +30 ms ; dérive de +200 ms si l'événement « lecture » arrive tard |
+| `endSeconds` | +1 à +5 ms, mais le lecteur passe à l'état « terminé » (titre et suggestions affichés). **La borne survit au `seekTo()` suivant**, ce qui fausse les lectures suivantes jusqu'au rechargement. Reproduit trois fois, en contradiction avec la documentation (IFR) |
+| Latence clic → « lecture », lecteur réutilisé | 275 à 300 ms |
+| Latence clic → « lecture », lecteur recréé | 337 à 654 ms sur Mac, jusqu'à 1 057 ms au premier essai sur iPhone |
+| Retard de l'événement « lecture », lecteur réutilisé | La vidéo a déjà avancé d'environ 190 ms quand l'événement arrive : un « extrait de 0,1 s » joue en réalité environ 0,19 s |
+| Publicités | Aucune observée |
+
+### 6.3 Son
+- Chrome Mac : son présent au premier clic, après « Passer » immédiat et après « Passer » différé de 50 ms.
+- iPhone : son présent lors des essais de réplique. La comparaison immédiat / différé depuis une pause normale reste à faire avec la sonde v2.
+- L'échec de « Passer immédiat » (relecture depuis le début) observé sur Chrome Mac est probablement dû à un lecteur resté à l'état « terminé ». Le scénario D de la sonde v2 sert à le vérifier.
+
+### 6.4 Coupure des répliques — calibrage en cours
+
+| Navigateur | Pause demandée | Pause effective | Écart avec 111,900 s | Ressenti |
+|---|---|---|---|---|
+| Chrome Mac | 111,904 | 111,909 | +9 ms | Coupure correcte |
+| Safari Mac | 111,907 | 111,910 | +10 ms | Non renseigné |
+| Safari iPhone (2 essais) | 111,905 / 111,913 | 111,912 / 111,921 | +12 / +21 ms | « Tu » de « Tu sais voler ! » entendu brièvement |
+
+- La pause n'est pas en retard sur iPhone : 3 à 12 ms de plus que sur Mac seulement.
+- **Hypothèse principale** : la borne de cette réplique est trop juste.
+- **Hypothèse alternative, non exclue** : un décalage entre la position rapportée et le son entendu sur iOS.
+- À trancher par les essais d'écoute de la sonde v2 (décalage par pas de 25 ms).
+- Le jeu actuel coupe à la borne + 0,12 s (`QuotePlayer.tsx:181`), donc probablement après le début de la chute.
+- **Aucune borne n'est modifiée dans les données tant que le calibrage n'est pas validé.**

@@ -275,3 +275,33 @@ Bobine du jour (graine par date) · statistiques locales · ticket de partage en
 
 ## Prochaine action
 Étape 1a (validée le 2026-11-12) : vérifier les contraintes officielles YouTube et documenter les options d'affichage conformes dans `docs/YOUTUBE_CONSTRAINTS.md`. Aucune autre étape sans accord explicite.
+
+---
+
+## Décisions issues des essais de l'étape 1a (2026-11-12)
+
+Les détails et mesures sont dans [`docs/YOUTUBE_CONSTRAINTS.md` §6](./YOUTUBE_CONSTRAINTS.md).
+
+### Moteur de lecture (étape 2, à appliquer le moment venu)
+- **Coupure sur le temps vidéo** (`getCurrentTime` à chaque trame puis `pauseVideo`). Abandon de la coupure sur l'horloge.
+- **Pas d'`endSeconds`** : il fait passer le lecteur à l'état « terminé » (titre et suggestions affichés) et sa borne survit au `seekTo()`.
+- **Lecteur unique réutilisé** (latence de 275 à 300 ms, contre 340 ms à 1 s pour un lecteur recréé).
+- **Ne jamais laisser le lecteur dans l'état « terminé »**. Toujours repositionner avant de relancer. Un « terminé » inattendu est traité comme une fin prématurée.
+- **Palier 1 à redéfinir** : un extrait de 0,1 s joue en réalité environ 0,19 s sur un lecteur réutilisé. Les durées annoncées devront correspondre aux durées mesurées.
+- **Marge de sécurité de coupure des répliques** à fixer d'après le calibrage d'écoute en cours (sonde v2, section C). Les bornes de `classic-quotes.json` ne seront corrigées qu'après validation.
+
+### Mode Répliques
+- Option A d'affichage (lecteur visible en permanence, sans surcouche) : conforme, et sans effet sur le jeu puisque le titre y est affiché.
+- **Variété** :
+  - tirage aléatoire parmi toutes les répliques d'une vidéo (520 répliques sur 73 vidéos, soit environ 7 par vidéo) ;
+  - **historique par joueur** en `localStorage` versionné, qui fait passer en priorité les répliques jamais vues ;
+  - ordre des choix mélangé, conservé.
+- À terme, seul l'ajout de nouvelles répliques calibrées empêchera vraiment l'apprentissage par cœur.
+
+### Blindtest et Battle — décision en attente
+Avec un lecteur conforme, le titre est visible au chargement, pendant les extraits courts, en pause et à la fin. Voies possibles, au choix de l'utilisateur :
+1. demander l'autorisation écrite de YouTube (option C) ;
+2. changer ce que l'on devine (par exemple le moment dans la vidéo, l'année, ou la suite de la scène) ;
+3. statu quo non conforme (déconseillé, risque de suspension de l'accès).
+
+Les étapes 2 à 6 dépendent de cette décision pour le Blindtest et le Battle.
