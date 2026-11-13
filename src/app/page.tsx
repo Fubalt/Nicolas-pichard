@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { VideoItem, GameStatus, GuessResult, GameMode } from '@/types/game';
 import { CYPRIEN_ALL_VIDEOS, CYPRIEN_CLASSIC_VIDEOS, getRandomGameVideo } from '@/data/videos';
-import { ATTEMPT_DURATIONS } from '@/constants/game';
-import { normalizeTitle, matchesSearch } from '@/lib/utils';
+import { isCorrectGuess } from '@/lib/search';
+import { roundStep, type RoundAction } from '@/features/blindtest/round';
 import { YouTubePlayer, YouTubePlayerRef } from '@/components/YouTubePlayer';
 import { TimelineProgressBar } from '@/components/TimelineProgressBar';
 import { GuessHistory } from '@/components/GuessHistory';
@@ -186,104 +186,43 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleTogglePlay]);
 
-  const handleSkip = () => {
-    if (gameStatus === 'won' || gameStatus === 'lost') return;
-    if (playerRef.current && isPlaying) {
-      playerRef.current.pauseSnippet();
-    }
-
-    const currentDuration = ATTEMPT_DURATIONS[currentAttempt];
-    const newGuesses: GuessResult[] = [
-      ...guesses,
-      {
-        attemptIndex: currentAttempt,
-        type: 'skipped',
-        tierDuration: currentDuration,
-      },
-    ];
-    setGuesses(newGuesses);
-
-    if (currentAttempt + 1 >= 4) {
-      // Defeat
-      setGameStatus('lost');
-      if (mainTab === 'battle') {
-        const elapsedSec = (Date.now() - battleRoundStartTimeRef.current) / 1000;
-        mp.finishCurrentRound(false, currentAttempt, elapsedSec);
-      }
-    } else {
-      const nextAttempt = currentAttempt + 1;
-      const nextDuration = ATTEMPT_DURATIONS[nextAttempt];
-      setCurrentAttempt(nextAttempt);
-      setTimeout(() => {
-        playerRef.current?.playContinuation(currentDuration, nextDuration);
-      }, 50);
-    }
-  };
-
-  const handleGuess = (guessedTitle: string) => {
+  const applyRoundAction = (action: RoundAction) => {
     if (!activeVideo || gameStatus === 'won' || gameStatus === 'lost') return;
     if (playerRef.current && isPlaying) {
       playerRef.current.pauseSnippet();
     }
 
-    const normGuess = normalizeTitle(guessedTitle);
-    const normTarget = normalizeTitle(activeVideo.title);
+    const { state, outcome } = roundStep(
+      { attempt: currentAttempt, status: gameStatus, guesses },
+      action
+    );
+    setGuesses(state.guesses);
+    setGameStatus(state.status);
+    setCurrentAttempt(state.attempt);
 
-    const isCorrect =
-      matchesSearch(activeVideo.title, guessedTitle) ||
-      matchesSearch(guessedTitle, activeVideo.title) ||
-      normGuess === normTarget ||
-      (normGuess.length >= 4 && normTarget.includes(normGuess)) ||
-      (normTarget.length >= 4 && normGuess.includes(normTarget));
-
-    const currentDuration = ATTEMPT_DURATIONS[currentAttempt];
-
-    if (isCorrect) {
-      // Victory!
-      const newGuesses: GuessResult[] = [
-        ...guesses,
-        {
-          attemptIndex: currentAttempt,
-          type: 'success',
-          guessedTitle,
-          tierDuration: currentDuration,
-        },
-      ];
-      setGuesses(newGuesses);
-      setGameStatus('won');
+    if (outcome.kind === 'won' || outcome.kind === 'lost') {
       if (mainTab === 'battle') {
         const elapsedSec = (Date.now() - battleRoundStartTimeRef.current) / 1000;
-        mp.finishCurrentRound(true, currentAttempt, elapsedSec);
+        mp.finishCurrentRound(outcome.kind === 'won', outcome.attempt, elapsedSec);
       }
-    } else {
-      // Incorrect
-      const newGuesses: GuessResult[] = [
-        ...guesses,
-        {
-          attemptIndex: currentAttempt,
-          type: 'incorrect',
-          guessedTitle,
-          tierDuration: currentDuration,
-        },
-      ];
-      setGuesses(newGuesses);
-
-      if (currentAttempt + 1 >= 4) {
-        // Lost after 4 attempts
-        setGameStatus('lost');
-        if (mainTab === 'battle') {
-          const elapsedSec = (Date.now() - battleRoundStartTimeRef.current) / 1000;
-          mp.finishCurrentRound(false, currentAttempt, elapsedSec);
-        }
-      } else {
-        const nextAttempt = currentAttempt + 1;
-        const nextDuration = ATTEMPT_DURATIONS[nextAttempt];
-        setCurrentAttempt(nextAttempt);
-        setTimeout(() => {
-          playerRef.current?.playContinuation(currentDuration, nextDuration);
-        }, 50);
-      }
+    } else if (outcome.kind === 'next') {
+      setTimeout(() => {
+        playerRef.current?.playContinuation(outcome.previousDuration, outcome.nextDuration);
+      }, 50);
     }
+  };
+
+  const handleSkip = () => applyRoundAction({ type: 'skip' });
+
+  const handleGuess = (guessedTitle: string, videoId?: string) => {
+    if (!activeVideo) return;
+    // A guess wins only if it designates exactly the target video (by id).
+    const correct = isCorrectGuess(
+      CYPRIEN_ALL_VIDEOS,
+      videoId ? { id: videoId } : guessedTitle,
+      activeVideo.id
+    );
+    applyRoundAction({ type: 'guess', guessedTitle, correct });
   };
 
   return (

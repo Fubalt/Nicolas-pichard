@@ -1,4 +1,5 @@
 import cyprienVideosRaw from '../../data/cyprien-videos.json';
+import catalogMeta from '../../data/catalog-meta.json';
 import { VideoItem, GameMode } from '@/types/game';
 
 interface RawVideoItem {
@@ -18,14 +19,10 @@ export const CYPRIEN_ALL_VIDEOS: VideoItem[] = (cyprienVideosRaw as RawVideoItem
 // Backward compatibility alias
 export const CYPRIEN_VIDEOS = CYPRIEN_ALL_VIDEOS;
 
-// Classic slice: exactly from "CYPRIEN - LE DESSIN" (9 déc. 2016) to "Le McDonald's - Cyprien" (25 fév. 2010)
-const DESSIN_INDEX = CYPRIEN_ALL_VIDEOS.findIndex((v) => v.id === 'bhK4UkmzAVA'); // index 106
-const MCDO_INDEX = CYPRIEN_ALL_VIDEOS.findIndex((v) => v.id === '1-XJuqHB_t8'); // index 194
+// Classic catalog: explicit ids listed in data/catalog-meta.json (independent of JSON ordering)
+const classicSet = new Set<string>((catalogMeta as { classic: string[] }).classic);
 
-export const CYPRIEN_CLASSIC_VIDEOS: VideoItem[] = CYPRIEN_ALL_VIDEOS.slice(
-  DESSIN_INDEX !== -1 ? DESSIN_INDEX : 106,
-  (MCDO_INDEX !== -1 ? MCDO_INDEX : 194) + 1
-);
+export const CYPRIEN_CLASSIC_VIDEOS: VideoItem[] = CYPRIEN_ALL_VIDEOS.filter((v) => classicSet.has(v.id));
 
 let lastStartTime: number | null = null;
 let lastVideoId: string | null = null;

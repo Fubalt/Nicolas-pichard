@@ -5,6 +5,7 @@ import { QuoteQuestion, QuoteGameStatus, QuoteAnswerRecord } from '@/types/quote
 import { getRandomQuotes } from '@/data/quotes';
 import { QuotePlayer, QuotePlayerRef } from './QuotePlayer';
 import { QuoteEndCard } from './QuoteEndCard';
+import { pickCustomQuestions, scoreAnswer } from '@/features/quotes/session';
 import {
   Sparkles,
   Volume2,
@@ -41,13 +42,7 @@ export function QuoteGameView({
   const [totalQuestions, setTotalQuestions] = useState<number>(10);
   const [questions, setQuestions] = useState<QuoteQuestion[]>(() => {
     if (customQuestions && customQuestions.length > 0) {
-      return [...customQuestions]
-        .sort(() => 0.5 - Math.random())
-        .slice(0, 10)
-        .map((q) => ({
-          ...q,
-          options: [...q.options].sort(() => 0.5 - Math.random()),
-        }));
+      return pickCustomQuestions(customQuestions, 10);
     }
     return getRandomQuotes(10);
   });
@@ -64,13 +59,7 @@ export function QuoteGameView({
   const initGame = useCallback((count = totalQuestions) => {
     let qList: QuoteQuestion[];
     if (customQuestions && customQuestions.length > 0) {
-      qList = [...customQuestions]
-        .sort(() => 0.5 - Math.random())
-        .slice(0, count)
-        .map((q) => ({
-          ...q,
-          options: [...q.options].sort(() => 0.5 - Math.random()),
-        }));
+      qList = pickCustomQuestions(customQuestions, count);
     } else {
       qList = getRandomQuotes(count);
     }
@@ -99,41 +88,19 @@ export function QuoteGameView({
     (option: string) => {
       if (gameStatus === 'revealing' || gameStatus === 'finished' || !currentQuestion) return;
 
-      const isCorrect = option === currentQuestion.correctPunchline;
       setSelectedOption(option);
       setGameStatus('revealing');
 
-      // Streak & Combo Multiplier calculation
-      let newStreak = 0;
-      let multiplier = 1.0;
-      let points = 0;
-
-      if (isCorrect) {
-        newStreak = currentStreak + 1;
-        multiplier = newStreak >= 4 ? 2.0 : newStreak === 3 ? 1.5 : newStreak === 2 ? 1.2 : 1.0;
-        points = Math.round(1000 * multiplier);
-        setCurrentStreak(newStreak);
-        setMaxStreak((prev) => Math.max(prev, newStreak));
-      } else {
-        newStreak = 0;
-        multiplier = 1.0;
-        points = 0;
-        setCurrentStreak(0);
-      }
-
-      const record: QuoteAnswerRecord = {
-        question: currentQuestion,
-        selectedOption: option,
-        isCorrect,
-        pointsEarned: points,
-      };
+      const { record, streaks } = scoreAnswer(currentQuestion, option, { currentStreak, maxStreak });
+      setCurrentStreak(streaks.currentStreak);
+      setMaxStreak(streaks.maxStreak);
 
       setAnswers((prev) => [...prev, record]);
 
       // Play continuation to hear and see the exact punchline in video!
       playerRef.current?.revealPunchline();
     },
-    [gameStatus, currentQuestion, currentStreak]
+    [gameStatus, currentQuestion, currentStreak, maxStreak]
   );
 
   // Next question

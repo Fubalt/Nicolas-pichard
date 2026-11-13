@@ -7,7 +7,7 @@ import { Search, Send, Film } from 'lucide-react';
 
 interface Props {
   catalog: VideoItem[];
-  onGuess: (selectedTitle: string) => void;
+  onGuess: (selectedTitle: string, videoId?: string) => void;
   disabled: boolean;
   placeholder?: string;
 }
@@ -75,9 +75,9 @@ export function GuessInput({ catalog, onGuess, disabled, placeholder = 'Recherch
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (isOpen && selectedIndex >= 0 && suggestions[selectedIndex]) {
-        submitSelection(suggestions[selectedIndex].title);
+        submitSelection(suggestions[selectedIndex].title, suggestions[selectedIndex].id);
       } else if (suggestions.length > 0) {
-        submitSelection(suggestions[0].title);
+        submitSelection(suggestions[0].title, suggestions[0].id);
       } else if (query.trim()) {
         submitSelection(query.trim());
       }
@@ -86,8 +86,8 @@ export function GuessInput({ catalog, onGuess, disabled, placeholder = 'Recherch
     }
   };
 
-  const submitSelection = (title: string) => {
-    onGuess(title);
+  const submitSelection = (title: string, videoId?: string) => {
+    onGuess(title, videoId);
     setQuery('');
     setIsOpen(false);
     setSelectedIndex(-1);
@@ -119,7 +119,7 @@ export function GuessInput({ catalog, onGuess, disabled, placeholder = 'Recherch
               <li
                 key={video.id}
                 onMouseEnter={() => setSelectedIndex(index)}
-                onClick={() => submitSelection(video.title)}
+                onClick={() => submitSelection(video.title, video.id)}
                 className={`px-3.5 py-2.5 flex items-center justify-between cursor-pointer text-sm transition-colors ${
                   isSelected ? 'bg-orange-500/15 text-orange-200' : 'text-zinc-200 hover:bg-zinc-800/70'
                 }`}
@@ -173,9 +173,9 @@ export function GuessInput({ catalog, onGuess, disabled, placeholder = 'Recherch
           type="button"
           onClick={() => {
             if (selectedIndex >= 0 && suggestions[selectedIndex]) {
-              submitSelection(suggestions[selectedIndex].title);
+              submitSelection(suggestions[selectedIndex].title, suggestions[selectedIndex].id);
             } else if (suggestions.length > 0) {
-              submitSelection(suggestions[0].title);
+              submitSelection(suggestions[0].title, suggestions[0].id);
             } else if (query.trim()) {
               submitSelection(query.trim());
             }

@@ -1,9 +1,10 @@
 import { QuoteQuestion } from '@/types/quotes';
 import classicQuotesData from './classic-quotes.json';
+import { shuffle } from '@/lib/rng';
 
 /**
  * 100% Exact subtitles directly extracted from Cyprien's official classic YouTube videos.
- * Covers all 71 classic sketch videos (excluding making-of, bêtisiers, coulisses, FAQ).
+ * Covers all 73 classic sketch videos (excluding making-of, bêtisiers, coulisses, FAQ).
  * 
  * Every video contains 5 to 8 distinct punchline moments spread across its timeline (early, middle, late),
  * totaling over 500 unique quote moments!
@@ -40,7 +41,7 @@ export function getRandomQuotes(count = 5): QuoteQuestion[] {
   }
 
   // Shuffle video IDs to get diverse video universe
-  const videoIds = Array.from(videoMap.keys()).sort(() => 0.5 - Math.random());
+  const videoIds = shuffle(Array.from(videoMap.keys()));
   const selectedQuotes: QuoteQuestion[] = [];
 
   for (const vId of videoIds) {
@@ -81,8 +82,7 @@ export function getRandomQuotes(count = 5): QuoteQuestion[] {
 
   // If count is higher than distinct videos, fill remaining from unpicked quotes
   if (selectedQuotes.length < count) {
-    const remaining = CYPRIEN_QUOTES.filter((q) => !selectedQuotes.some((sq) => sq.id === q.id));
-    remaining.sort(() => 0.5 - Math.random());
+    const remaining = shuffle(CYPRIEN_QUOTES.filter((q) => !selectedQuotes.some((sq) => sq.id === q.id)));
     while (selectedQuotes.length < count && remaining.length > 0) {
       selectedQuotes.push(remaining.pop()!);
     }
@@ -91,6 +91,6 @@ export function getRandomQuotes(count = 5): QuoteQuestion[] {
   // Shuffle options for each selected question
   return selectedQuotes.map((q) => ({
     ...q,
-    options: [...q.options].sort(() => 0.5 - Math.random()),
+    options: shuffle(q.options),
   }));
 }

@@ -7,15 +7,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "fetch-videos": "node scripts/fetch-videos.mjs"
+    "fetch-videos": "node scripts/fetch-videos.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "validate-data": "node scripts/validate-data.mjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
     "lucide-react": "^1.47.0",
     "next": "16.3.5",
     "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "youtube-transcript": "^1.3.1"
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -26,6 +28,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

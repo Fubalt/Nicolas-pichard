@@ -274,7 +274,27 @@ Bobine du jour (graine par date) · statistiques locales · ticket de partage en
 ---
 
 ## Prochaine action
-Étape 1a (validée le 2026-11-12) : vérifier les contraintes officielles YouTube et documenter les options d'affichage conformes dans `docs/YOUTUBE_CONSTRAINTS.md`. Aucune autre étape sans accord explicite.
+Étape 2 partielle : moteur de lecture `src/features/player` branché sur **Répliques uniquement** (option A, coupure à `pauseTime`), avec e2e Playwright et faux YT. Ensuite, étape 3 (maquette BOBINE sur `/labo/bobine`), puis arrêt pour validation visuelle. Le Blindtest garde son lecteur actuel tant que la décision Blindtest/Battle n'est pas prise. Étapes 4 et 6 bloquées, et étape 5 tant que BOBINE n'est pas validée.
+
+## Journal d'exécution
+- **2026-11-13 — Étape 1b faite.**
+  - Outillage :
+    - Vitest ajouté ;
+    - scripts `test`, `typecheck` et `validate-data` ;
+    - CI GitHub Actions (`.github/workflows/ci.yml`) ;
+    - `youtube-transcript` retiré. `canvas-confetti` est conservé car il est utilisé.
+  - Données :
+    - flags `classic` explicites dans `data/catalog-meta.json` (mêmes 89 identifiants que l'ancienne tranche) ;
+    - `scripts/validate-data.mjs`.
+  - Code :
+    - `lib/rng` : Fisher-Yates en remplacement des `sort(random)` biaisés ;
+    - `lib/search` : réponse validée par `id`, et texte libre accepté seulement s'il est non ambigu ;
+    - reducers purs `features/blindtest/round.ts`, partagé par Solo et Battle, et `features/quotes/session.ts`.
+  - Vérifications :
+    - lint, typecheck, tests (18), validate-data et build sont verts ;
+    - captures avant/après identiques pour Solo et Battle en 1440 et 390 ;
+    - sur Répliques, seule la sélection aléatoire des questions change, la mise en page est identique.
+  - Reprise : étape 2 partielle.
 
 ---
 
