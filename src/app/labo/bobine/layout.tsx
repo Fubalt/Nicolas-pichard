@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Archivo, Instrument_Serif, JetBrains_Mono } from 'next/font/google';
 import '@/styles/tokens.css';
-import './bobine.css';
+import '@/styles/bobine.css';
 
 const archivo = Archivo({
   variable: '--font-archivo',

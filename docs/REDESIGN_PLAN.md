@@ -274,7 +274,9 @@ Bobine du jour (graine par date) · statistiques locales · ticket de partage en
 ---
 
 ## Prochaine action
-**Arrêt : validation visuelle de BOBINE** (`/labo/bobine?ecran=primitives|repliques|battle|etats|blindtest`). Restent aussi à confirmer la coupure à `pauseTime` (sans +0,12 s) et à faire les mesures réelles sur navigateurs. Le Blindtest garde son lecteur actuel tant que la décision Blindtest/Battle n'est pas prise. Étapes 4 et 6 bloquées, et étape 5 tant que BOBINE n'est pas validée.
+**Arrêt : retour de l'utilisateur sur `/repliques`** (préversion Vercel). Ensuite :
+- l'étape 7 (bascule : lien depuis l'accueil, retrait du noindex), seulement avec ton accord ;
+- les étapes 4 et 6, qui restent bloquées par la décision Blindtest/Battle (statu quo pour l'instant).
 
 ## Journal d'exécution
 - **2026-11-13 — Étape 1b faite.**
@@ -324,6 +326,27 @@ Bobine du jour (graine par date) · statistiques locales · ticket de partage en
     - le bouton principal désactivé est sous le contraste AA ;
     - pas de View Transitions.
   - Reprise : validation visuelle par l'utilisateur, puis étape 5. Les étapes 4 et 6 restent bloquées par la décision Blindtest/Battle.
+
+- **2026-11-13 — Décisions de l'utilisateur.**
+  - BOBINE est validée, avec corrections.
+  - La coupure se fait à `pauseTime`, sans les +0,12 s.
+  - Blindtest et Battle : statu quo pour l'instant. Les étapes 4 et 6 restent bloquées.
+- **2026-11-13 — Étape 5 faite (Répliques en BOBINE sur `/repliques`, noindex, sans lien depuis l'accueil).**
+  - Logique :
+    - `useQuoteClip`, un hook sans interface extrait de `QuotePlayer`. `QuotePlayer` en devient une enveloppe, avec un rendu identique ;
+    - `quoteSessionReducer` dans `session.ts`, couvert par 3 tests et utilisé par `QuoteGameView`. L'onglet Répliques actuel ne change pas.
+  - Primitives `src/components/bobine/` : Monitor, Pellicule, Button, Chip, Tabs, ScoreBlock et Choice. Les styles passent dans `src/styles/bobine.css`, et la maquette du labo utilise ces mêmes primitives.
+  - Corrections des défauts de l'étape 3 :
+    - les onglets passent à la ligne ;
+    - la zone d'action est collante sous 640 px ;
+    - le curseur est visible ;
+    - le mouvement réduit est respecté ;
+    - la règle `.bobine button` écrasait la couleur du bouton principal (texte clair sur fond jaune), elle passe en `:where()`.
+  - Écran `src/features/quotes/RepliquesGame.tsx` : les questions sont tirées côté serveur (`connection()`), donc sans écart d'hydratation. Les règles sont identiques (5 ou 10 questions, 1000 × combo, Espace, 1-4 et Entrée), avec un écran de résultat, un bilan et les erreurs vidéo.
+  - e2e : `npm run e2e` lance l'ancienne suite (7 scénarios) et `repliques-v2` (5 scénarios).
+  - Reste à reprendre :
+    - sur mobile, le moniteur collant sort partiellement de l'écran quand on descend jusqu'au panneau ;
+    - les raccourcis clavier sont affichés aussi sur mobile.
 
 ---
 

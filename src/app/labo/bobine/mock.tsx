@@ -1,7 +1,7 @@
 'use client';
 
 import { ATTEMPT_DURATIONS } from '@/constants/game';
-import Link from 'next/link';
+import { Button, Choice, Chip, Monitor, Pellicule, ScoreBlock, Tabs } from '@/components/bobine';
 import { useState } from 'react';
 
 export interface MockQuote {
@@ -38,26 +38,10 @@ function Section({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-/** Moniteur : repères, timecode, REC AUTOUR du lecteur, jamais dessus. */
-function Monitor({ timecode, status, children }: { timecode: string; status: string; children?: React.ReactNode }) {
+function Player({ label = 'Lecteur YouTube' }: { label?: string }) {
   return (
-    <div className="bb-monitor">
-      <div className="bb-monitor-bar">
-        <span className="bb-rec">
-          <span className="bb-dot" aria-hidden="true" /> REC
-        </span>
-        <span className="bb-mono" style={{ color: '#f4f1ea' }}>{timecode}</span>
-      </div>
-      <div className="bb-frame">
-        <div data-player-slot className="aspect-video bb-slot">
-          Lecteur YouTube
-        </div>
-        <i aria-hidden="true" />
-      </div>
-      <div className="bb-monitor-foot">
-        <span className="bb-mono bb-mute">{status}</span>
-        {children}
-      </div>
+    <div data-player-slot className="aspect-video bb-slot">
+      {label}
     </div>
   );
 }
@@ -123,10 +107,10 @@ function Primitives() {
         <div className="bb-panel" style={{ display: 'grid', gap: 16 }}>
           {(['primary', 'secondary', 'ghost'] as const).map((v) => (
             <div className="bb-row" key={v}>
-              <button className={`bb-btn bb-btn-${v}`}>Normal</button>
-              <button className={`bb-btn bb-btn-${v} is-hover`} tabIndex={-1}>Survol</button>
-              <button className={`bb-btn bb-btn-${v} is-focus`} tabIndex={-1}>Focus</button>
-              <button className={`bb-btn bb-btn-${v}`} disabled>Désactivé</button>
+              <Button variant={v}>Normal</Button>
+              <Button variant={v} className="is-hover" tabIndex={-1}>Survol</Button>
+              <Button variant={v} className="is-focus" tabIndex={-1}>Focus</Button>
+              <Button variant={v} disabled>Désactivé</Button>
               <span className="bb-mono bb-mute">{v}</span>
             </div>
           ))}
@@ -149,11 +133,11 @@ function Primitives() {
 
       <Section label="Pastilles">
         <div className="bb-row">
-          <span className="bb-pill bb-pill-ok"><span className="bb-dot" /> Prêt</span>
-          <span className="bb-pill bb-pill-rec"><span className="bb-dot" /> Live</span>
-          <span className="bb-pill bb-pill-sub">Hôte</span>
-          <span className="bb-pill bb-pill-mute">En attente</span>
-          <span className="bb-pill bb-pill-sub">Combo ×3</span>
+          <Chip variant="ok" dot>Prêt</Chip>
+          <Chip variant="rec" dot>Live</Chip>
+          <Chip variant="sub">Hôte</Chip>
+          <Chip variant="mute">En attente</Chip>
+          <Chip variant="sub">Combo ×3</Chip>
         </div>
       </Section>
 
@@ -162,11 +146,11 @@ function Primitives() {
           {toast && (
             <div className="bb-toast" role="status">
               <span>Bonne réplique ! +300 pts</span>
-              <button className="bb-btn bb-btn-ghost" style={{ minHeight: 32, padding: '0 8px', marginLeft: 'auto' }} onClick={() => setToast(false)} aria-label="Fermer">✕</button>
+              <Button variant="ghost" style={{ minHeight: 32, padding: '0 8px', marginLeft: 'auto' }} onClick={() => setToast(false)} aria-label="Fermer">✕</Button>
             </div>
           )}
         </div>
-        {!toast && <button className="bb-btn bb-btn-secondary" onClick={() => setToast(true)}>Réafficher</button>}
+        {!toast && <Button variant="secondary" onClick={() => setToast(true)}>Réafficher</Button>}
       </Section>
     </>
   );
@@ -181,49 +165,33 @@ function Repliques({ quote }: { quote: MockQuote }) {
     <div className="bb-game" style={{ marginTop: 8 }}>
       <div>
         <div className="bb-sticky">
-          <Monitor timecode={tc(quote.pauseTime)} status="ARRÊT SUR IMAGE" />
+          <Monitor timecode={tc(quote.pauseTime)} status="ARRÊT SUR IMAGE"><Player /></Monitor>
         </div>
         <div className="bb-sub" style={{ marginTop: 8 }} aria-live="polite">
           <q>{setup}<span className="bb-cursor" aria-label="réplique à compléter">▁▁▁</span></q>
         </div>
       </div>
       <div className="bb-panel">
-        <div className="bb-row" style={{ justifyContent: 'space-between', alignItems: 'flex-end' }}>
-          <div>
-            <p className="bb-label">Score</p>
-            <p className="bb-score">1 250</p>
-          </div>
-          <span className="bb-pill bb-pill-sub">Combo ×3</span>
-        </div>
-        <div style={{ margin: '16px 0' }}>
-          <div className="bb-row" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
-            <span className="bb-mono bb-mute">Réplique 3 / 5</span>
-            <span className="bb-mono bb-mute">{quote.videoTitle}</span>
-          </div>
-          <div className="bb-progress" role="progressbar" aria-valuemin={1} aria-valuemax={5} aria-valuenow={3} aria-label="Progression">
-            <i className="done" /><i className="done" /><i className="now" /><i /><i />
-          </div>
-        </div>
+        <ScoreBlock score={1250} combo={3} progress={{ current: 3, total: 5, label: 'Réplique 3 / 5', aside: quote.videoTitle }} />
         <p className="bb-h3 bb-title" style={{ marginBottom: 12 }}>Quelle est la suite ?</p>
         <div className="bb-choices">
           {quote.options.slice(0, 4).map((o, i) => {
-            const cls = done ? (o === quote.correctPunchline ? 'ok' : o === sel ? 'ko' : '') : '';
+            const state = done ? (o === quote.correctPunchline ? 'correct' : o === sel ? 'wrong' : 'idle') : sel === o ? 'selected' : 'idle';
             return (
-              <button key={o} className={`bb-choice ${cls}`} aria-pressed={sel === o} disabled={done} onClick={() => setSel(o)}>
-                <span className="k">{keys[i]}</span>
-                <span>{o}</span>
-              </button>
+              <Choice key={o} letter={keys[i]} state={state} disabled={done} onClick={() => setSel(o)}>
+                {o}
+              </Choice>
             );
           })}
         </div>
-        <div className="bb-actions">
-          <button className="bb-btn bb-btn-primary bb-btn-block" disabled={!sel || done} onClick={() => setDone(true)}>
+        <div className="bb-action-bar">
+          <Button block disabled={!sel || done} onClick={() => setDone(true)}>
             Valider la réplique
-          </button>
+          </Button>
           {done && (
-            <button className="bb-btn bb-btn-ghost bb-btn-block bb-note" onClick={() => { setDone(false); setSel(null); }}>
+            <Button variant="ghost" block onClick={() => { setDone(false); setSel(null); }}>
               Rejouer cet écran
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -246,7 +214,7 @@ function Battle() {
         <p className="bb-label" id="lobby">Salon</p>
         <p className="bb-code" style={{ margin: '4px 0 16px' }}>K7QX-42</p>
         <div className="bb-row" style={{ marginBottom: 16 }}>
-          <span className="bb-pill bb-pill-rec"><span className="bb-dot" /> Battle</span>
+          <Chip variant="rec" dot>Battle</Chip>
           <span className="bb-mono bb-mute">4 / 8 joueurs</span>
         </div>
         <ul className="bb-players">
@@ -254,16 +222,16 @@ function Battle() {
             <li className="bb-player" key={p.n}>
               <span className="bb-avatar" aria-hidden="true">{p.n[0]}</span>
               <span className="grow">{p.n}</span>
-              {p.host && <span className="bb-pill bb-pill-sub">Hôte</span>}
-              {p.ready ? <span className="bb-pill bb-pill-ok">Prêt</span> : <span className="bb-pill bb-pill-mute">En attente</span>}
+              {p.host && <Chip variant="sub">Hôte</Chip>}
+              {p.ready ? <Chip variant="ok">Prêt</Chip> : <Chip variant="mute">En attente</Chip>}
             </li>
           ))}
         </ul>
         <div className="bb-row" style={{ marginTop: 20 }}>
-          <button className="bb-btn bb-btn-primary" style={{ flex: 1 }} onClick={() => setReady(!ready)}>
+          <Button style={{ flex: 1 }} onClick={() => setReady(!ready)}>
             {ready ? 'Annuler : je ne suis pas prêt' : 'Je suis prêt'}
-          </button>
-          <button className="bb-btn bb-btn-secondary">Copier le code</button>
+          </Button>
+          <Button variant="secondary">Copier le code</Button>
         </div>
         <div className="bb-row" style={{ marginTop: 24, gap: 16 }}>
           <div className="bb-clap" role="img" aria-label="Clap : compte à rebours 3">
@@ -289,7 +257,7 @@ function Battle() {
         <hr />
         <div className="bb-row" style={{ justifyContent: 'space-between' }}>
           <span className="bb-mono" style={{ color: 'var(--on-paper-mute)' }}>N° 000482 · 5 manches</span>
-          <button className="bb-btn bb-btn-primary">Rejouer</button>
+          <Button>Rejouer</Button>
         </div>
       </section>
     </div>
@@ -317,8 +285,8 @@ function Etats() {
           <p className="bb-label" style={{ color: '#ff8379' }}>Erreur 150 · lecture impossible</p>
           <p className="bb-title bb-h2" style={{ margin: '8px 0 16px' }}>Bobine abîmée — on change de film</p>
           <div className="bb-row">
-            <button className="bb-btn bb-btn-primary">Film suivant</button>
-            <button className="bb-btn bb-btn-ghost">Quitter la partie</button>
+            <Button>Film suivant</Button>
+            <Button variant="ghost">Quitter la partie</Button>
           </div>
         </div>
       </Section>
@@ -337,8 +305,12 @@ function Etats() {
 function Blindtest({ titles }: { titles: string[] }) {
   const [sel, setSel] = useState<string | null>(null);
   // Durées réelles du jeu (src/constants/game.ts). Le palier 1 reste à redéfinir (étape 1a).
-  const state = ['played', 'now', 'locked', 'locked'];
-  const segs = ATTEMPT_DURATIONS.map((d, i) => ({ t: `${String(d).replace('.', ',')} s`, c: state[i] }));
+  const state = ['played', 'now', 'locked', 'locked'] as const;
+  const segs = ATTEMPT_DURATIONS.map((d, i) => ({
+    label: `${String(d).replace('.', ',')} s`,
+    state: state[i] ?? ('locked' as const),
+    ariaLabel: state[i] === 'locked' ? `Palier ${i + 1} verrouillé` : undefined,
+  }));
   return (
     <>
       <div className="bb-banner warn bb-hold" role="note" style={{ marginTop: 8 }}>
@@ -348,20 +320,15 @@ function Blindtest({ titles }: { titles: string[] }) {
       <div className="bb-game" style={{ marginTop: 16 }}>
         <div>
           <div className="bb-sticky">
-            <Monitor timecode="00:00:00.8" status="TENTATIVE 2 / 4" />
+            <Monitor timecode="00:00:00.8" status="TENTATIVE 2 / 4"><Player /></Monitor>
           </div>
-          <div className="bb-film" style={{ marginTop: 8 }} aria-label="Pellicule : 4 paliers">
-            <div className="bb-perf" aria-hidden="true" />
-            <div className="bb-segs">
-              {segs.map((s, i) => (
-                <div key={s.t} className={`bb-seg ${s.c}`}>
-                  {s.c === 'locked' ? <span aria-label={`Palier ${i + 1} verrouillé`}>🔒 {s.t}</span> : s.t}
-                </div>
-              ))}
-              <span className="bb-head" aria-hidden="true" />
-            </div>
-            <div className="bb-perf" aria-hidden="true" />
-          </div>
+          <Pellicule
+            className="bb-film-gap"
+            segments={segs}
+            weights={[1, 2, 4, 8]}
+            head={0.2}
+            ariaLabel={`Pellicule : ${segs.length} paliers`}
+          />
           <p className="bb-mono bb-mute bb-note">Paliers actuels du jeu : {ATTEMPT_DURATIONS.map((d) => String(d).replace('.', ',')).join(' s · ')} s</p>
         </div>
         <div className="bb-panel">
@@ -373,14 +340,14 @@ function Blindtest({ titles }: { titles: string[] }) {
           <ul id="sug" role="listbox" className="bb-players" style={{ marginTop: 8 }}>
             {titles.slice(0, 4).map((t) => (
               <li key={t} role="option" aria-selected={sel === t}>
-                <button className="bb-choice" style={{ minHeight: 44 }} onClick={() => setSel(t)}>{t}</button>
+                <Choice style={{ minHeight: 44 }} state={sel === t ? 'selected' : 'idle'} onClick={() => setSel(t)}>{t}</Choice>
               </li>
             ))}
           </ul>
-          <div className="bb-actions">
+          <div className="bb-action-bar">
             <div className="bb-row">
-              <button className="bb-btn bb-btn-primary" style={{ flex: 1 }} disabled={!sel}>Valider</button>
-              <button className="bb-btn bb-btn-secondary">Passer</button>
+              <Button style={{ flex: 1 }} disabled={!sel}>Valider</Button>
+              <Button variant="secondary">Passer</Button>
             </div>
           </div>
         </div>
@@ -394,13 +361,11 @@ export function BobineMock({ ecran, quote, titles }: { ecran: Ecran; quote: Mock
     <main className="bb-wrap">
       <p className="bb-label">Labo · maquette non indexée</p>
       <h1 className="bb-title bb-h1" style={{ marginTop: 8 }}>Bobine</h1>
-      <nav className="bb-tabs" aria-label="Écrans de la maquette">
-        {TABS.map((t) => (
-          <Link key={t.id} href={`/labo/bobine?ecran=${t.id}`} className="bb-tab" aria-current={ecran === t.id ? 'page' : undefined} scroll={false}>
-            {t.label}
-          </Link>
-        ))}
-      </nav>
+      <Tabs
+        ariaLabel="Écrans de la maquette"
+        active={ecran}
+        items={TABS.map((t) => ({ id: t.id, label: t.label, href: `/labo/bobine?ecran=${t.id}` }))}
+      />
       <div className="bb-screen" key={ecran}>
         {ecran === 'primitives' && <Primitives />}
         {ecran === 'repliques' && <Repliques quote={quote} />}

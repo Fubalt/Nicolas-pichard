@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { QuoteQuestion, QuoteGameStatus, QuoteAnswerRecord } from '@/types/quotes';
+import React, { useState, useEffect, useReducer, useRef, useCallback } from 'react';
+import { QuoteQuestion } from '@/types/quotes';
 import { getRandomQuotes } from '@/data/quotes';
 import { QuotePlayer, QuotePlayerRef } from './QuotePlayer';
 import { QuoteEndCard } from './QuoteEndCard';
-import { pickCustomQuestions, scoreAnswer } from '@/features/quotes/session';
+import { initialQuoteSession, pickCustomQuestions, quoteSessionReducer } from '@/features/quotes/session';
 import {
   Sparkles,
   Volume2,
@@ -40,44 +40,31 @@ export function QuoteGameView({
   modeTitle,
 }: Props) {
   const [totalQuestions, setTotalQuestions] = useState<number>(10);
-  const [questions, setQuestions] = useState<QuoteQuestion[]>(() => {
-    if (customQuestions && customQuestions.length > 0) {
-      return pickCustomQuestions(customQuestions, 10);
-    }
-    return getRandomQuotes(10);
-  });
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [gameStatus, setGameStatus] = useState<QuoteGameStatus>('ready');
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [answers, setAnswers] = useState<QuoteAnswerRecord[]>([]);
-  const [currentStreak, setCurrentStreak] = useState<number>(0);
-  const [maxStreak, setMaxStreak] = useState<number>(0);
+  const pickQuestions = useCallback(
+    (count: number) =>
+      customQuestions && customQuestions.length > 0
+        ? pickCustomQuestions(customQuestions, count)
+        : getRandomQuotes(count),
+    [customQuestions]
+  );
+  const [session, dispatch] = useReducer(quoteSessionReducer, undefined, () =>
+    initialQuoteSession(pickQuestions(10))
+  );
+  const { questions, index: currentIndex, status: gameStatus, selected: selectedOption, answers } = session;
+  const { currentStreak, maxStreak } = session.streaks;
 
   const playerRef = useRef<QuotePlayerRef>(null);
 
   // Initialize game session
-  const initGame = useCallback((count = totalQuestions) => {
-    let qList: QuoteQuestion[];
-    if (customQuestions && customQuestions.length > 0) {
-      qList = pickCustomQuestions(customQuestions, count);
-    } else {
-      qList = getRandomQuotes(count);
-    }
-    setQuestions(qList);
-    setCurrentIndex(0);
-    setAnswers([]);
-    setCurrentStreak(0);
-    setMaxStreak(0);
-    setSelectedOption(null);
-    setGameStatus('ready');
-  }, [totalQuestions, customQuestions]);
+  const initGame = useCallback(
+    (count = totalQuestions) => dispatch({ type: 'start', questions: pickQuestions(count) }),
+    [totalQuestions, pickQuestions]
+  );
 
   const currentQuestion: QuoteQuestion | undefined = questions[currentIndex];
 
   // Pause point reached (~3s clip ends)
-  const handlePauseReached = useCallback(() => {
-    setGameStatus('waiting_qcm');
-  }, []);
+  const handlePauseReached = useCallback(() => dispatch({ type: 'pause_reached' }), []);
 
   const handleRevealFinished = useCallback(() => {
     // Reveal ended
@@ -86,34 +73,16 @@ export function QuoteGameView({
   // Player clicks a choice in the QCM
   const handleSelectOption = useCallback(
     (option: string) => {
-      if (gameStatus === 'revealing' || gameStatus === 'finished' || !currentQuestion) return;
-
-      setSelectedOption(option);
-      setGameStatus('revealing');
-
-      const { record, streaks } = scoreAnswer(currentQuestion, option, { currentStreak, maxStreak });
-      setCurrentStreak(streaks.currentStreak);
-      setMaxStreak(streaks.maxStreak);
-
-      setAnswers((prev) => [...prev, record]);
-
+      if (gameStatus !== 'waiting_qcm' || !currentQuestion) return;
+      dispatch({ type: 'select', option });
       // Play continuation to hear and see the exact punchline in video!
       playerRef.current?.revealPunchline();
     },
-    [gameStatus, currentQuestion, currentStreak, maxStreak]
+    [gameStatus, currentQuestion]
   );
 
   // Next question
-  const handleNext = useCallback(() => {
-    if (currentIndex + 1 >= questions.length) {
-      setGameStatus('finished');
-      return;
-    }
-
-    setCurrentIndex((prev) => prev + 1);
-    setSelectedOption(null);
-    setGameStatus('ready');
-  }, [currentIndex, questions.length]);
+  const handleNext = useCallback(() => dispatch({ type: 'next' }), []);
 
   // Replay snippet or full scene if revealing
   const handleReplaySetup = useCallback(() => {

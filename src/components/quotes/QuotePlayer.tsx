@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useCallback, useEffect, useImperativeHandle, useRef, useState, forwardRef } from 'react';
+import React, { useImperativeHandle, forwardRef } from 'react';
 import { Play, Pause, RotateCcw, Sparkles, AlertTriangle } from 'lucide-react';
-import { usePlayer } from '@/features/player/usePlayer';
+import { useQuoteClip, QUOTE_ERROR_TEXT as ERROR_TEXT } from '@/features/quotes/useQuoteClip';
 
 export interface QuotePlayerRef {
   playSetup: () => void;
@@ -27,116 +27,23 @@ interface Props {
   onReady?: () => void;
 }
 
-type Phase = 'standby' | 'setup_playing' | 'setup_paused' | 'revealing';
-
-const ERROR_TEXT: Record<string, string> = {
-  invalid: 'Extrait invalide.',
-  html5: 'Le lecteur a rencontré un problème.',
-  unavailable: 'Cette vidéo n’est plus disponible.',
-  embed_blocked: 'Cette vidéo ne peut pas être lue ici.',
-  unknown: 'Le lecteur YouTube n’a pas pu se charger.',
-};
-
 /**
  * Lecteur du mode Répliques, option A (docs/YOUTUBE_CONSTRAINTS.md §4) :
  * le lecteur reste visible, rien n'est superposé, les commandes sont en dessous.
- * La coupure se fait sur le temps vidéo, exactement à `pauseTime`.
+ * La logique est dans useQuoteClip.
  */
-export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlayer(
-  { videoId, startTime, pauseTime, resumeDuration, volume, isMuted, onPauseReached, onRevealFinished, onReady },
-  ref
-) {
-  // L'amorce dure au moins 3,8 s (comportement existant conservé).
-  const setupStart = Math.max(0, pauseTime - Math.max(3.8, pauseTime - startTime));
-  const setupDuration = pauseTime - setupStart;
-  const revealDuration = Math.max(2.5, resumeDuration);
-
-  const [phase, setPhase] = useState<Phase>('standby');
-  const phaseRef = useRef<Phase>('standby');
-  const setPhaseBoth = (p: Phase) => {
-    phaseRef.current = p;
-    setPhase(p);
-  };
-
-  const playSetupRef = useRef<() => void>(() => {});
-
-  const { hostRef, engineRef, ready, playing, progress, error } = usePlayer({
-    videoId,
-    parkAt: setupStart,
-    volume,
-    muted: isMuted,
-    onReady,
-    // Clic dans le lecteur hors d'un segment : on rejoue l'amorce plutôt que de dévoiler la suite.
-    onUnsolicitedPlay: () => {
-      const p = phaseRef.current;
-      if (p === 'standby' || p === 'setup_paused') playSetupRef.current();
-    },
-  });
-
-  // Nouvelle question : retour à l'attente (ajustement pendant le rendu).
-  const clipKey = `${videoId}@${setupStart}`;
-  const [shownKey, setShownKey] = useState(clipKey);
-  if (shownKey !== clipKey) {
-    setShownKey(clipKey);
-    setPhase('standby');
-  }
-  useEffect(() => {
-    phaseRef.current = phase;
-  }, [phase]);
-
-  const playSetup = useCallback(() => {
-    setPhaseBoth('setup_playing');
-    engineRef.current?.play({
-      from: setupStart,
-      cutAt: pauseTime,
-      duration: setupDuration,
-      onDone: () => {
-        setPhaseBoth('setup_paused');
-        onPauseReached();
-      },
-    });
-  }, [engineRef, setupStart, pauseTime, setupDuration, onPauseReached]);
-  useEffect(() => {
-    playSetupRef.current = playSetup;
-  }, [playSetup]);
-
-  const revealPunchline = useCallback(() => {
-    setPhaseBoth('revealing');
-    engineRef.current?.play({ from: pauseTime, cutAt: null, duration: revealDuration, onDone: onRevealFinished });
-  }, [engineRef, pauseTime, revealDuration, onRevealFinished]);
-
-  const replayFullScene = useCallback(() => {
-    setPhaseBoth('revealing');
-    engineRef.current?.play({
-      from: setupStart,
-      cutAt: null,
-      duration: setupDuration + revealDuration,
-      onDone: onRevealFinished,
-    });
-  }, [engineRef, setupStart, setupDuration, revealDuration, onRevealFinished]);
-
-  const pause = useCallback(() => engineRef.current?.pause(), [engineRef]);
-
-  const resume = useCallback(() => {
-    const engine = engineRef.current;
-    if (!engine) return;
-    if (!engine.resumeSegment() && phaseRef.current === 'revealing') engine.resumeFree();
-  }, [engineRef]);
-
-  const togglePlay = useCallback(() => {
-    const p = phaseRef.current;
-    if (p === 'standby' || p === 'setup_paused') return playSetup();
-    if (playing) return pause();
-    resume();
-  }, [playing, playSetup, pause, resume]);
+export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlayer(props, ref) {
+  const clip = useQuoteClip(props);
+  const { hostRef, phase, ready, playing, progress, error, togglePlay } = clip;
+  const pauseTime = props.pauseTime;
 
   useImperativeHandle(ref, () => ({
-    playSetup,
-    replaySetup: playSetup,
-    replayFullScene,
-    revealPunchline,
-    pause,
-    resume,
+    playSetup: clip.playSetup,
+    replaySetup: clip.replaySetup,
+    replayFullScene: clip.replayFullScene,
+    revealPunchline: clip.revealPunchline,
+    pause: clip.pause,
+    resume: clip.resume,
     togglePlay,
     isPlaying: playing,
   }));
