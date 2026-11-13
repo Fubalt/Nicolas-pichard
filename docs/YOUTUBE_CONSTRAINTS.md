@@ -204,23 +204,39 @@ Les essais ont été faits avec la sonde `public/labo/youtube-probe.html` (prév
 - Le jeu actuel coupe à la borne + 0,12 s (`QuotePlayer.tsx:181`), donc probablement après le début de la chute.
 - **Aucune borne n'est modifiée dans les données tant que le calibrage n'est pas validé.**
 
-### 6.5 Résultats d'écoute (2026-11-13) — une seule réplique, en cours
+### 6.5 Résultats d'écoute (2026-11-13) — une seule réplique, essais arrêtés
 
-Réplique « Les geeks » (`geeks_super_pouvoirs_voler`, borne des données 111,900 s).
+Réplique « Les geeks » (`geeks_super_pouvoirs_voler`, borne des données 111,900 s), sortie **haut-parleur**, coupure sur le temps vidéo.
 
-| Appareil, sortie | Décalage | Pause effective | « Tu » entendu | « Oui… » entier |
-|---|---|---|---|---|
-| Mac (sortie non précisée) | 0 ms | +9 à +19 ms | Non (réponse de l'utilisateur, **à reconfirmer**) | Oui |
-| iPhone, haut-parleur | 0 ms | 111,923 s (+23 ms) | Oui | Oui |
-| iPhone, haut-parleur | −300 ms | 111,625 s (+25 ms) | **Oui, un « t » très bref** | Oui |
+| Appareil | Décalage | Fondu | Pause effective | « Tu » entendu | « Oui… » entier |
+|---|---|---|---|---|---|
+| Safari Mac | 0 ms | Non | 111,913 s (+13 ms) | Non | Oui |
+| Safari Mac | 0 ms | Oui | 111,920 s (+20 ms) | Non | Oui |
+| Safari Mac | −300 ms | Non | 111,623 s (+23 ms) | Non | Oui |
+| Safari Mac | −300 ms | Oui | 111,618 s (+18 ms) | Non | Oui |
+| iPhone (Safari iOS 18.7) | 0 ms | Non | 111,923 s (+23 ms) | Oui | Oui |
+| iPhone | 0 ms | Oui | 111,914 s (+14 ms) | Oui | Oui |
+| iPhone | −300 ms | Non | 111,615 s (+15 ms) | Oui (« t » très bref) | Oui |
+| iPhone | −300 ms | Oui | 111,619 s (+19 ms) | Oui | Oui |
+| iPhone | −500 ms | Non | 111,411 s (+11 ms) | **Non** | **Oui** |
+| iPhone | −1 000 ms | Non | 110,920 s (+20 ms) | Non | **Non (amorce coupée)** |
 
-- **Correction :** une réponse précédente indiquait que le « Tu » disparaissait à −250 ms sur iPhone. L'utilisateur a précisé que c'était une erreur d'écoute. Même à −300 ms, le tout début du « t » s'entend encore.
-- Les positions de pause rapportées par YouTube restent 9 à 27 ms après la borne, sur tous les appareils. À −300 ms, la vidéo s'arrête donc environ 275 ms avant la borne des données.
-- Deux explications restent possibles :
-  - **(a)** du son mis en mémoire tampon continue de sortir après la pause sur iOS ;
-  - **(b)** la coupure brutale produit un **petit clic** qui ressemble à un « t ».
-- La sonde propose désormais une plage de −2 000 à +300 ms et un **fondu de sortie** (`setVolume()` par paliers sur environ 80 ms avant la borne) pour départager les deux.
-- **Aucune borne n'est modifiée dans les données. Il reste à vérifier si une anticipation par plateforme, ou un fondu, est nécessaire.**
+**Constats :**
+- Sur haut-parleur, pour « Les geeks » : le « Tu » est inaudible et « Oui… » reste entier **à 0 ms sur Safari Mac** et **à −500 ms sur l'iPhone**.
+- Sur l'iPhone, le « t » reste audible à −300 ms, et l'amorce est coupée à −1 000 ms.
+- Sur tous les essais, YouTube signale la pause 11 à 23 ms après la borne visée, sur Mac comme sur iPhone.
+- Une réponse antérieure (« iPhone : −250 ms ») était une erreur d'écoute, corrigée par l'utilisateur.
+
+**Interprétation (hypothèse, non mesurée) :**
+- **Décalage audio sur iPhone** : du son continuerait d'être entendu après la position de pause rapportée par YouTube. Un clic de coupure semble moins probable, puisqu'aucun « t » n'est entendu quand on coupe plus tôt (−500 et −1 000 ms).
+- **La durée pendant laquelle le son continue après la pause n'a pas été mesurée.**
+- Le fondu de sortie (`setVolume()` par paliers) n'a rien changé sur l'iPhone. Ce résultat n'est pas probant : je n'ai pas vérifié si `setVolume()` agit réellement sur le volume sous iOS.
+
+**Limites :**
+- Une seule réplique, une seule sortie audio (haut-parleur), un seul iPhone et un seul Mac.
+- **Ces essais ne suffisent pas pour fixer une marge générale.**
+- Les essais sont arrêtés pour l'instant, à la demande de l'utilisateur.
+- **Inchangés :** les bornes et les données (`classic-quotes.json`), la sonde, le moteur.
 
 ### 6.6 Relance depuis l'état « terminé » (scénario D) — confirmé sur les trois navigateurs
 
