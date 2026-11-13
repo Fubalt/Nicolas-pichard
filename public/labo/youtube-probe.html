@@ -91,7 +91,7 @@
   <!-- C en premier : c'est le test prioritaire -->
   <section aria-labelledby="h-quote">
     <h2 id="h-quote">C. Calibrage de la coupure des répliques</h2>
-    <p class="meta">Choisis une réplique, règle le décalage (0 ms = borne actuelle des données), puis « Rejouer l'amorce ». Après chaque écoute, renseigne les deux colonnes du tableau ci-dessous.</p>
+    <p class="meta">Choisis une réplique, règle le décalage (0 ms = borne actuelle des données, de −2 000 à +300 ms), puis « Rejouer l'amorce ». Après chaque écoute, renseigne les deux colonnes du tableau ci-dessous.</p>
     <div class="row" style="margin-top:10px">
       <label for="qvideo" style="width:100%">Vidéo</label>
       <select id="qvideo" class="full"></select>
@@ -108,13 +108,18 @@
     </div>
     <div class="row">
       <label for="offset">Décalage de coupure</label>
-      <input id="offset" type="range" min="-300" max="100" step="25" value="0" aria-describedby="offset-out">
+      <input id="offset" type="range" min="-2000" max="300" step="25" value="0" aria-describedby="offset-out">
       <span id="offset-out" class="big">0 ms</span>
     </div>
     <div class="row">
+      <button id="off-m500">− 500 ms</button>
+      <button id="off-m100">− 100 ms</button>
       <button id="off-minus">− 25 ms</button>
       <button id="off-plus">+ 25 ms</button>
       <button id="off-zero">0 ms</button>
+    </div>
+    <div class="row">
+      <label><input id="fade" type="checkbox"> Fondu de sortie (volume baissé par paliers sur ~80 ms avant la borne, via <code>setVolume()</code>)</label>
     </div>
     <p class="meta">Borne des données : <b class="num" id="q-base">—</b> s · Borne visée : <b class="num big" id="q-target">—</b> s</p>
     <div class="row">
@@ -131,8 +136,8 @@
     <h3>Essais de réplique</h3>
     <div class="scroll">
       <table>
-        <thead><tr><th>#</th><th>Réplique</th><th>Décalage</th><th>Borne visée</th><th>Pos. demande pause</th><th>Pos. événement pause</th><th>Dépassement</th><th>Sortie audio</th><th>Début de la chute entendu ?</th><th>Fin de l'amorce entière ?</th><th>Note</th></tr></thead>
-        <tbody id="trials"><tr><td colspan="11" class="meta">Aucun essai pour l'instant.</td></tr></tbody>
+        <thead><tr><th>#</th><th>Réplique</th><th>Décalage</th><th>Borne visée</th><th>Pos. demande pause</th><th>Pos. événement pause</th><th>Dépassement</th><th>Sortie audio</th><th>Fondu</th><th>Début de la chute entendu ?</th><th>Fin de l'amorce entière ?</th><th>Note</th></tr></thead>
+        <tbody id="trials"><tr><td colspan="12" class="meta">Aucun essai pour l'instant.</td></tr></tbody>
       </table>
     </div>
     <p class="meta">Dépassement = position à l'événement « pause » − borne visée.</p>
@@ -306,8 +311,10 @@ $('#q-random').addEventListener('click', () => {
   selectQuote(others[Math.floor(Math.random() * others.length)], { keepList: true });
 });
 $('#offset').addEventListener('input', updateTarget);
-const nudge = (d) => { const v = Math.max(-300, Math.min(100, offsetMs() + d)); $('#offset').value = v; updateTarget(); };
+const nudge = (d) => { const v = Math.max(-2000, Math.min(300, offsetMs() + d)); $('#offset').value = v; updateTarget(); };
 $('#off-minus').addEventListener('click', () => nudge(-25));
+$('#off-m100').addEventListener('click', () => nudge(-100));
+$('#off-m500').addEventListener('click', () => nudge(-500));
 $('#off-plus').addEventListener('click', () => nudge(25));
 $('#off-zero').addEventListener('click', () => { $('#offset').value = 0; updateTarget(); });
 
@@ -350,7 +357,7 @@ function notReady() { if (!player || !ready) { log('Lecteur pas prêt : attends 
 
 /* ---------- Essais A, B, C ---------- */
 function cancelRun() {
-  if (run) { clearTimeout(run.timer); clearTimeout(run.guard); clearTimeout(run.finTimer); cancelAnimationFrame(run.raf); run = null; }
+  if (run) { clearTimeout(run.timer); clearTimeout(run.guard); clearTimeout(run.finTimer); clearTimeout(run.fadeTimer); cancelAnimationFrame(run.raf); run = null; }
   if (endedScn) { clearTimeout(endedScn.timer); endedScn = null; }
 }
 
@@ -370,7 +377,7 @@ function begin(spec) {
       player.seekTo(spec.from, true);
       player.playVideo();
     }
-    log(`${spec.label} : playVideo() appelé ${spec.delay ? `après ${spec.delay} ms` : 'dans le geste'} (début ${fmt(spec.from)} s, fin visée ${fmt(spec.target)} s, méthode ${spec.method}${spec.offset != null ? `, décalage ${spec.offset} ms` : ''})`);
+    log(`${spec.label} : playVideo() appelé ${spec.delay ? `après ${spec.delay} ms` : 'dans le geste'} (début ${fmt(spec.from)} s, fin visée ${fmt(spec.target)} s, méthode ${spec.method}${spec.offset != null ? `, décalage ${spec.offset} ms` : ''}${spec.fade ? ', fondu' : ''})`);
     run.guard = setTimeout(() => { if (run && run.tPlay === null) { log('Aucune lecture après 8 s'); finish(run.blocked ? 'lecture bloquée' : 'pas de lecture', { premature: true }); } }, 8000);
   };
   if (spec.delay) setTimeout(go, spec.delay); else go();
@@ -386,7 +393,12 @@ function onState(s) {
     const dur = run.target - run.from;
     if (run.method === 'wall') run.timer = setTimeout(() => stop('horloge'), Math.max(0, dur) * 1000);
     if (run.method === 'video') {
-      const loop = () => { if (!run || run.stopping) return; if (safeTime() >= run.target) stop('temps vidéo'); else run.raf = requestAnimationFrame(loop); };
+      const loop = () => {
+        if (!run || run.stopping) return;
+        const now = safeTime();
+        if (run.fade && !run.fading && now >= run.target - FADE_S) startFade();
+        if (now >= run.target) stop('temps vidéo'); else run.raf = requestAnimationFrame(loop);
+      };
       loop();
       run.timer = setTimeout(() => stop('secours'), (Math.max(0, dur) + 8) * 1000);
     }
@@ -398,6 +410,16 @@ function onState(s) {
     else { run.stopping = true; setTimeout(() => finish('fin prématurée (état terminé)', { premature: true }), 50); }
   }
 }
+const FADE_S = 0.08, FADE_STEPS = [60, 40, 20, 0];
+function startFade() {
+  run.fading = true;
+  if ($('#muted').checked) { log('Fondu ignoré : lecteur en muet'); return; }
+  log(`Fondu de sortie : début à ${fmt(safeTime())} s (borne ${fmt(run.target)} s)`);
+  let i = 0;
+  const step = () => { if (!run || i >= FADE_STEPS.length) return; try { player.setVolume(FADE_STEPS[i]); } catch (e) {} i++; if (i < FADE_STEPS.length) run.fadeTimer = setTimeout(step, 20); };
+  step();
+}
+function restoreVolume() { if (player && !$('#muted').checked) { try { player.setVolume(80); } catch (e) {} } }
 function stop(why) {
   if (!run || run.stopping) return;
   run.stopping = true; run.why = why; run.ctReq = safeTime();
@@ -410,15 +432,16 @@ function finish(note, opts = {}) {
   if (!run) return;
   const r = run; cancelRun();
   const ctEnd = r.ctPauseEvt ?? safeTime();
+  if (r.fade) setTimeout(restoreVolume, 150);
   if (r.kind === 'quote') {
     const t = {
       n: trials.length + 1, quoteId: r.quote.id, title: r.quote.videoTitle, punchline: r.quote.correctPunchline,
       offset: r.offset, target: r.target, ctReq: r.ctReq, ctPauseEvt: r.ctPauseEvt,
       overshootMs: r.ctPauseEvt != null ? Math.round((r.ctPauseEvt - r.target) * 1000) : null,
-      audio: $('#audio').value, heard: '', intact: '', note: (r.blocked ? 'lecture bloquée · ' : '') + (note || ''),
+      audio: $('#audio').value, fade: !!r.fade, heard: '', intact: '', note: (r.blocked ? 'lecture bloquée · ' : '') + (note || ''),
     };
     trials.push(t); renderTrials(); showCard(t);
-    log(`Essai réplique #${t.n} (${t.quoteId}, décalage ${t.offset} ms) : borne ${fmt(t.target)} s, demande de pause à ${fmt(t.ctReq)} s, événement pause à ${fmt(t.ctPauseEvt)} s, dépassement ${t.overshootMs ?? '—'} ms`);
+    log(`Essai réplique #${t.n} (${t.quoteId}, décalage ${t.offset} ms${t.fade ? ', fondu' : ''}) : borne ${fmt(t.target)} s, demande de pause à ${fmt(t.ctReq)} s, événement pause à ${fmt(t.ctPauseEvt)} s, dépassement ${t.overshootMs ?? '—'} ms`);
   } else {
     const row = {
       n: results.length + 1, label: r.label, method: r.method, requested: +(r.target - r.from).toFixed(3),
@@ -444,7 +467,7 @@ function obsSelect(t, field) {
     ['', 'Oui', 'Non'].map((o) => `<option value="${o}"${o === v ? ' selected' : ''}>${o || '—'}</option>`).join('') + '</select>';
 }
 function renderTrials() {
-  $('#trials').innerHTML = trials.map((t) => `<tr><td>${t.n}</td><td>${esc(t.title)} · ${esc(t.quoteId)}</td><td>${t.offset > 0 ? '+' : ''}${t.offset} ms</td><td>${fmt(t.target)} s</td><td>${fmt(t.ctReq)} s</td><td>${fmt(t.ctPauseEvt)} s</td><td>${t.overshootMs ?? '—'} ms</td><td>${esc(t.audio || NR)}</td><td>${obsSelect(t, 'heard')}</td><td>${obsSelect(t, 'intact')}</td><td>${esc(t.note)}</td></tr>`).join('');
+  $('#trials').innerHTML = trials.map((t) => `<tr><td>${t.n}</td><td>${esc(t.title)} · ${esc(t.quoteId)}</td><td>${t.offset > 0 ? '+' : ''}${t.offset} ms</td><td>${fmt(t.target)} s</td><td>${fmt(t.ctReq)} s</td><td>${fmt(t.ctPauseEvt)} s</td><td>${t.overshootMs ?? '—'} ms</td><td>${esc(t.audio || NR)}</td><td>${t.fade ? 'Oui' : 'Non'}</td><td>${obsSelect(t, 'heard')}</td><td>${obsSelect(t, 'intact')}</td><td>${esc(t.note)}</td></tr>`).join('');
 }
 $('#trials').addEventListener('change', (e) => {
   const el = e.target; if (!el.dataset || !el.dataset.trial) return;
@@ -453,7 +476,7 @@ $('#trials').addEventListener('change', (e) => {
 
 /* ---------- Carte de réponse (dernier essai de réplique) ---------- */
 let cardTrial = null;
-function showCard(t) { cardTrial = t; $('#answer-card').hidden = false; $('#ac-title').textContent = `Essai #${t.n} · décalage ${t.offset > 0 ? '+' : ''}${t.offset} ms · borne ${fmt(t.target)} s`; updateCard(); }
+function showCard(t) { cardTrial = t; $('#answer-card').hidden = false; $('#ac-title').textContent = `Essai #${t.n} · décalage ${t.offset > 0 ? '+' : ''}${t.offset} ms · borne ${fmt(t.target)} s${t.fade ? ' · fondu' : ''}`; updateCard(); }
 function updateCard() { if (!cardTrial) return; document.querySelectorAll('button.ac').forEach((b) => b.setAttribute('aria-pressed', String(cardTrial[b.dataset.field] === b.dataset.val))); }
 document.querySelectorAll('button.ac').forEach((b) => b.addEventListener('click', () => {
   if (!cardTrial) return;
@@ -485,7 +508,7 @@ $('#video').addEventListener('change', () => { cancelRun(); videoId = $('#video'
 $('#q-setup').addEventListener('click', () => {
   const q = currentQuote, off = offsetMs();
   if (videoId !== q.videoId) { log('Vidéo de la réplique pas encore chargée : resélectionne la réplique'); return; }
-  begin({ kind: 'quote', label: 'Réplique (amorce)', method: 'video', from: q.startTime, target: targetFor(q, off), quote: q, offset: off });
+  begin({ kind: 'quote', label: 'Réplique (amorce)', method: 'video', from: q.startTime, target: targetFor(q, off), quote: q, offset: off, fade: $('#fade').checked });
 });
 $('#q-reveal').addEventListener('click', () => {
   if (notReady()) return;
@@ -557,7 +580,7 @@ function endedFinish(extra) {
 function buildReport() {
   const obs = QUESTIONS.map(([k, label]) => `- ${label} → ${(document.querySelector(`input[name="${k}"]:checked`) || {}).value || NR}`).join('\n');
   const r = $('#player-host').getBoundingClientRect();
-  const trialRows = trials.map((t) => `| ${t.n} | ${t.quoteId} | ${t.title} | ${t.offset} | ${fmt(t.target)} | ${fmt(t.ctReq)} | ${fmt(t.ctPauseEvt)} | ${t.overshootMs ?? '—'} | ${t.audio || NR} | ${t.heard || NR} | ${t.intact || NR} | ${t.note} |`).join('\n');
+  const trialRows = trials.map((t) => `| ${t.n} | ${t.quoteId} | ${t.title} | ${t.offset} | ${fmt(t.target)} | ${fmt(t.ctReq)} | ${fmt(t.ctPauseEvt)} | ${t.overshootMs ?? '—'} | ${t.audio || NR} | ${t.fade ? 'Oui' : 'Non'} | ${t.heard || NR} | ${t.intact || NR} | ${t.note} |`).join('\n');
   const rows = results.map((x) => `| ${x.n} | ${x.label} | ${x.requested} | ${x.latencyMs ?? '—'} | ${fmt(x.playLag)} | ${fmt(x.finMinusStart)} | ${fmt(x.overshoot)} | ${x.note} |`).join('\n');
   const endRows = endedRows.map((x) => `| ${x.n} | ${x.variant} | ${fmt(x.start)} | ${fmt(x.posBefore)} | ${fmt(x.posAtPlay)} | ${fmt(x.posAfter)} | ${x.constat} |`).join('\n');
   return [
@@ -569,8 +592,8 @@ function buildReport() {
     `Paramètres : ${JSON.stringify(playerVars())} · muet au départ : ${$('#muted').checked}`,
     `Sortie audio (sélection actuelle) : ${$('#audio').value || NR}`,
     '', '## C. Essais de réplique',
-    '| # | Réplique (id) | Vidéo | Décalage (ms) | Borne visée (s) | Pos. demande pause (s) | Pos. événement pause (s) | Dépassement (ms) | Sortie audio | Début de la chute entendu ? | Fin de l\'amorce entière ? | Note |',
-    '|---|---|---|---|---|---|---|---|---|---|---|---|', trialRows || '| — |',
+    '| # | Réplique (id) | Vidéo | Décalage (ms) | Borne visée (s) | Pos. demande pause (s) | Pos. événement pause (s) | Dépassement (ms) | Sortie audio | Fondu | Début de la chute entendu ? | Fin de l\'amorce entière ? | Note |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|---|', trialRows || '| — |',
     '', '## A et B. Mesures',
     '| # | Méthode | Demandé (s) | Latence (ms) | Retard évén. « lecture » (s) | Fin − début demandé (s) | Dépassement (s) | Note |',
     '|---|---|---|---|---|---|---|---|', rows || '| — |',

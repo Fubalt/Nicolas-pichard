@@ -204,22 +204,23 @@ Les essais ont été faits avec la sonde `public/labo/youtube-probe.html` (prév
 - Le jeu actuel coupe à la borne + 0,12 s (`QuotePlayer.tsx:181`), donc probablement après le début de la chute.
 - **Aucune borne n'est modifiée dans les données tant que le calibrage n'est pas validé.**
 
-### 6.5 Premier résultat d'écoute (2026-11-13) — une seule réplique
+### 6.5 Résultats d'écoute (2026-11-13) — une seule réplique, en cours
 
-Réplique « Les geeks » (`geeks_super_pouvoirs_voler`, borne des données 111,900 s), sortie audio non précisée :
+Réplique « Les geeks » (`geeks_super_pouvoirs_voler`, borne des données 111,900 s).
 
-| Appareil | Décalage où le « Tu » n'est plus entendu | Fin de « Oui… » à ce décalage |
-|---|---|---|
-| Mac | 0 ms | Entière |
-| iPhone (Safari iOS 18.7) | −250 ms | Entière |
+| Appareil, sortie | Décalage | Pause effective | « Tu » entendu | « Oui… » entier |
+|---|---|---|---|---|
+| Mac (sortie non précisée) | 0 ms | +9 à +19 ms | Non (réponse de l'utilisateur, **à reconfirmer**) | Oui |
+| iPhone, haut-parleur | 0 ms | 111,923 s (+23 ms) | Oui | Oui |
+| iPhone, haut-parleur | −300 ms | 111,625 s (+25 ms) | **Oui, un « t » très bref** | Oui |
 
-- Les positions de pause rapportées par YouTube sont les mêmes sur les deux appareils (+9 à +23 ms après la borne). L'écart d'environ 250 ms vient donc de ce qui est entendu sur iOS, pas de la position de pause.
-- **Un seul résultat, sur une seule réplique.** Il ne suffit pas à fixer une marge.
-- À vérifier :
-  - l'iPhone sur le haut-parleur, à 0 et à −250 ms ;
-  - le Mac à −250 ms (« Oui… » reste-t-il entier ?) ;
-  - quelques autres répliques sur iPhone.
-- **Aucune borne n'est modifiée dans les données.** Il reste à **vérifier si une anticipation par plateforme est nécessaire**.
+- **Correction :** une réponse précédente indiquait que le « Tu » disparaissait à −250 ms sur iPhone. L'utilisateur a précisé que c'était une erreur d'écoute. Même à −300 ms, le tout début du « t » s'entend encore.
+- Les positions de pause rapportées par YouTube restent 9 à 27 ms après la borne, sur tous les appareils. À −300 ms, la vidéo s'arrête donc environ 275 ms avant la borne des données.
+- Deux explications restent possibles :
+  - **(a)** du son mis en mémoire tampon continue de sortir après la pause sur iOS ;
+  - **(b)** la coupure brutale produit un **petit clic** qui ressemble à un « t ».
+- La sonde propose désormais une plage de −2 000 à +300 ms et un **fondu de sortie** (`setVolume()` par paliers sur environ 80 ms avant la borne) pour départager les deux.
+- **Aucune borne n'est modifiée dans les données. Il reste à vérifier si une anticipation par plateforme, ou un fondu, est nécessaire.**
 
 ### 6.6 Relance depuis l'état « terminé » (scénario D) — confirmé sur les trois navigateurs
 
