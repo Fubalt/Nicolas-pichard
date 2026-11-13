@@ -1,15 +1,8 @@
 'use client';
 
-import React, {
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-  useImperativeHandle,
-  forwardRef,
-} from 'react';
-import { Play, RotateCcw, Pause, Sparkles } from 'lucide-react';
-import { YTPlayerInstance, YTPlayerEvent } from '@/types/youtube';
+import React, { useCallback, useEffect, useImperativeHandle, useRef, useState, forwardRef } from 'react';
+import { Play, Pause, RotateCcw, Sparkles, AlertTriangle } from 'lucide-react';
+import { usePlayer } from '@/features/player/usePlayer';
 
 export interface QuotePlayerRef {
   playSetup: () => void;
@@ -34,613 +27,193 @@ interface Props {
   onReady?: () => void;
 }
 
+type Phase = 'standby' | 'setup_playing' | 'setup_paused' | 'revealing';
+
+const ERROR_TEXT: Record<string, string> = {
+  invalid: 'Extrait invalide.',
+  html5: 'Le lecteur a rencontré un problème.',
+  unavailable: 'Cette vidéo n’est plus disponible.',
+  embed_blocked: 'Cette vidéo ne peut pas être lue ici.',
+  unknown: 'Le lecteur YouTube n’a pas pu se charger.',
+};
+
+/**
+ * Lecteur du mode Répliques, option A (docs/YOUTUBE_CONSTRAINTS.md §4) :
+ * le lecteur reste visible, rien n'est superposé, les commandes sont en dessous.
+ * La coupure se fait sur le temps vidéo, exactement à `pauseTime`.
+ */
 export const QuotePlayer = forwardRef<QuotePlayerRef, Props>(function QuotePlayer(
-  {
-    videoId,
-    startTime,
-    pauseTime,
-    resumeDuration,
-    volume,
-    isMuted,
-    onPauseReached,
-    onRevealFinished,
-    onReady,
-  },
+  { videoId, startTime, pauseTime, resumeDuration, volume, isMuted, onPauseReached, onRevealFinished, onReady },
   ref
 ) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<YTPlayerInstance | null>(null);
+  // L'amorce dure au moins 3,8 s (comportement existant conservé).
+  const setupStart = Math.max(0, pauseTime - Math.max(3.8, pauseTime - startTime));
+  const setupDuration = pauseTime - setupStart;
+  const revealDuration = Math.max(2.5, resumeDuration);
 
-  // Runtime guarantee: setup always has at least 3.8s breathing room
-  const effectiveStartTime = Math.max(0, pauseTime - Math.max(3.8, pauseTime - startTime));
-
-  const [isReady, setIsReady] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
-  const [progress, setProgress] = useState(0); // 0 to 1
-  const [centerIcon, setCenterIcon] = useState<'play' | 'pause' | 'replay' | null>(null);
-
-  // Playback state tracking
-  // 'standby': initial state, paused at startTime, waiting for user
-  // 'setup_playing': playing the setup clip
-  // 'setup_paused': paused after setup clip (or paused by user)
-  // 'revealing': playing the punchline continuation continuously
-  // 'reveal_finished': reveal initial segment finished
-  const [phase, setPhase] = useState<
-    'standby' | 'setup_playing' | 'setup_paused' | 'revealing' | 'reveal_finished'
-  >('standby');
-
-  const userHasClickedPlayRef = useRef<boolean>(false);
-  const animFrameRef = useRef<number | null>(null);
-  const safetyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const iconTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const onReadyRef = useRef(onReady);
-  const volumeRef = useRef(volume);
-  const isMutedRef = useRef(isMuted);
-
-  useEffect(() => {
-    onReadyRef.current = onReady;
-  }, [onReady]);
-
-  useEffect(() => {
-    volumeRef.current = volume;
-  }, [volume]);
-
-  useEffect(() => {
-    isMutedRef.current = isMuted;
-  }, [isMuted]);
-
-  // Track playback time elapsed within current segment
-  const elapsedPlayTimeRef = useRef<number>(0);
-  const lastTimeCheckRef = useRef<number>(0);
-  const targetDurationRef = useRef<number>(3.8);
-  const currentModeRef = useRef<'setup' | 'reveal'>('setup');
-
-  const showCenterIconFeedback = (icon: 'play' | 'pause' | 'replay') => {
-    if (iconTimerRef.current) clearTimeout(iconTimerRef.current);
-    setCenterIcon(icon);
-    iconTimerRef.current = setTimeout(() => {
-      setCenterIcon(null);
-    }, 600);
+  const [phase, setPhase] = useState<Phase>('standby');
+  const phaseRef = useRef<Phase>('standby');
+  const setPhaseBoth = (p: Phase) => {
+    phaseRef.current = p;
+    setPhase(p);
   };
 
-  const clearTimers = () => {
-    if (animFrameRef.current) {
-      cancelAnimationFrame(animFrameRef.current);
-      animFrameRef.current = null;
-    }
-    if (safetyTimeoutRef.current) {
-      clearTimeout(safetyTimeoutRef.current);
-      safetyTimeoutRef.current = null;
-    }
-  };
+  const playSetupRef = useRef<() => void>(() => {});
 
-  // Sync volume & mute with player
-  useEffect(() => {
-    if (!playerRef.current) return;
-    try {
-      if (isMuted) {
-        playerRef.current.mute?.();
-      } else {
-        playerRef.current.unMute?.();
-        playerRef.current.setVolume?.(volume);
-      }
-    } catch {}
-  }, [volume, isMuted]);
-
-  // Disable subtitles / captions aggressively
-  const disableCaptions = useCallback((player: YTPlayerInstance) => {
-    if (!player) return;
-    try {
-      if (typeof player.unloadModule === 'function') {
-        player.unloadModule('captions');
-        player.unloadModule('cc');
-      }
-      if (typeof player.setOption === 'function') {
-        player.setOption('captions', 'track', {});
-        player.setOption('captions', 'reload', false);
-        player.setOption('cc', 'track', {});
-      }
-    } catch {}
-  }, []);
-
-  // Internal monitoring loop using performance.now() and getCurrentTime() while video is PLAYING
-  const startMonitoring = useCallback(
-    (mode: 'setup' | 'reveal', duration: number, onComplete: () => void) => {
-      clearTimers();
-      currentModeRef.current = mode;
-      targetDurationRef.current = duration;
-      lastTimeCheckRef.current = performance.now();
-      let hasCompleted = false;
-
-      const loop = () => {
-        if (!playerRef.current) return;
-
-        try {
-          const state = playerRef.current.getPlayerState?.();
-          // State 1 = PLAYING
-          if (state === 1) {
-            disableCaptions(playerRef.current);
-            const now = performance.now();
-            const deltaSec = (now - lastTimeCheckRef.current) / 1000;
-            lastTimeCheckRef.current = now;
-
-            elapsedPlayTimeRef.current += deltaSec;
-            const currentRatio = Math.min(1, elapsedPlayTimeRef.current / targetDurationRef.current);
-            setProgress(currentRatio);
-
-            const currentSec = playerRef.current.getCurrentTime?.() ?? 0;
-
-            if (mode === 'setup') {
-              // Cut condition for setup:
-              // Strictly cut when the actual video timestamp reaches pauseTime + 0.12s
-              // The +0.12s buffer gives the speaker breathing room so the final word is never cut off
-              const reachedPauseTimestamp =
-                currentSec >= effectiveStartTime &&
-                currentSec >= pauseTime + 0.12;
-
-              if (reachedPauseTimestamp) {
-                try {
-                  playerRef.current.pauseVideo();
-                } catch {}
-                setIsPlaying(false);
-                setProgress(1);
-                clearTimers();
-                onComplete();
-                return;
-              }
-            } else if (mode === 'reveal') {
-              // In reveal mode: DO NOT PAUSE THE VIDEO!
-              // The video continues playing the scene seamlessly.
-              if (elapsedPlayTimeRef.current >= targetDurationRef.current) {
-                setProgress(1);
-                if (!hasCompleted) {
-                  hasCompleted = true;
-                  onComplete();
-                }
-              }
-            }
-          } else {
-            // Video is buffering or paused, keep clock aligned
-            lastTimeCheckRef.current = performance.now();
-          }
-        } catch {}
-
-        animFrameRef.current = requestAnimationFrame(loop);
-      };
-
-      animFrameRef.current = requestAnimationFrame(loop);
-
-      // Safety timeout: strictly for setup mode fallback if anim loop stalls (e.g. background tab)
-      if (mode === 'setup') {
-        const safetyMs = Math.ceil((duration + 3.5) * 1000);
-        safetyTimeoutRef.current = setTimeout(() => {
-          if (playerRef.current && typeof playerRef.current.pauseVideo === 'function') {
-            try {
-              playerRef.current.pauseVideo();
-            } catch {}
-          }
-          setIsPlaying(false);
-          setProgress(1);
-          clearTimers();
-          onComplete();
-        }, safetyMs);
-      }
+  const { hostRef, engineRef, ready, playing, progress, error } = usePlayer({
+    videoId,
+    parkAt: setupStart,
+    volume,
+    muted: isMuted,
+    onReady,
+    // Clic dans le lecteur hors d'un segment : on rejoue l'amorce plutôt que de dévoiler la suite.
+    onUnsolicitedPlay: () => {
+      const p = phaseRef.current;
+      if (p === 'standby' || p === 'setup_paused') playSetupRef.current();
     },
-    [effectiveStartTime, pauseTime, disableCaptions]
-  );
+  });
 
-  // Play initial setup snippet from effectiveStartTime
+  // Nouvelle question : retour à l'attente (ajustement pendant le rendu).
+  const clipKey = `${videoId}@${setupStart}`;
+  const [shownKey, setShownKey] = useState(clipKey);
+  if (shownKey !== clipKey) {
+    setShownKey(clipKey);
+    setPhase('standby');
+  }
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+
   const playSetup = useCallback(() => {
-    if (!playerRef.current) return;
-    userHasClickedPlayRef.current = true;
-    setHasStarted(true);
-    setPhase('setup_playing');
-    setIsPlaying(true);
-    showCenterIconFeedback('play');
-
-    const duration = Math.max(3.8, pauseTime - effectiveStartTime);
-    elapsedPlayTimeRef.current = 0;
-    setProgress(0);
-
-    try {
-      disableCaptions(playerRef.current);
-      if (isMuted) {
-        playerRef.current.mute?.();
-      } else {
-        playerRef.current.unMute?.();
-        playerRef.current.setVolume?.(volume);
-      }
-      playerRef.current.seekTo(effectiveStartTime, true);
-      playerRef.current.playVideo();
-
-      startMonitoring('setup', duration, () => {
-        setPhase('setup_paused');
+    setPhaseBoth('setup_playing');
+    engineRef.current?.play({
+      from: setupStart,
+      cutAt: pauseTime,
+      duration: setupDuration,
+      onDone: () => {
+        setPhaseBoth('setup_paused');
         onPauseReached();
-      });
-    } catch {}
-  }, [effectiveStartTime, pauseTime, volume, isMuted, disableCaptions, startMonitoring, onPauseReached]);
-
-  // Replay the setup snippet from the start
-  const replaySetup = useCallback(() => {
-    playSetup();
+      },
+    });
+  }, [engineRef, setupStart, pauseTime, setupDuration, onPauseReached]);
+  useEffect(() => {
+    playSetupRef.current = playSetup;
   }, [playSetup]);
 
-  // Resume setup snippet if paused mid-playback
-  const resumeSetup = useCallback(() => {
-    if (!playerRef.current) return;
-    userHasClickedPlayRef.current = true;
-    setPhase('setup_playing');
-    setIsPlaying(true);
-    showCenterIconFeedback('play');
-
-    try {
-      disableCaptions(playerRef.current);
-      playerRef.current.playVideo();
-
-      startMonitoring('setup', targetDurationRef.current, () => {
-        setPhase('setup_paused');
-        onPauseReached();
-      });
-    } catch {}
-  }, [disableCaptions, startMonitoring, onPauseReached]);
-
-  // Reveal the punchline and continue playing the scene continuously!
   const revealPunchline = useCallback(() => {
-    if (!playerRef.current) return;
-    userHasClickedPlayRef.current = true;
-    setPhase('revealing');
-    setIsPlaying(true);
-    showCenterIconFeedback('play');
+    setPhaseBoth('revealing');
+    engineRef.current?.play({ from: pauseTime, cutAt: null, duration: revealDuration, onDone: onRevealFinished });
+  }, [engineRef, pauseTime, revealDuration, onRevealFinished]);
 
-    const duration = Math.max(2.5, resumeDuration);
-    elapsedPlayTimeRef.current = 0;
-    setProgress(0);
-
-    try {
-      disableCaptions(playerRef.current);
-      if (isMuted) {
-        playerRef.current.mute?.();
-      } else {
-        playerRef.current.unMute?.();
-        playerRef.current.setVolume?.(volume);
-      }
-      playerRef.current.seekTo(pauseTime, true);
-      playerRef.current.playVideo();
-
-      startMonitoring('reveal', duration, () => {
-        onRevealFinished();
-      });
-    } catch {}
-  }, [pauseTime, resumeDuration, volume, isMuted, disableCaptions, startMonitoring, onRevealFinished]);
-
-  // Replay from the beginning of the setup phrase and keep playing continuously through the punchline
   const replayFullScene = useCallback(() => {
-    if (!playerRef.current) return;
-    userHasClickedPlayRef.current = true;
-    setPhase('revealing');
-    setIsPlaying(true);
-    showCenterIconFeedback('play');
+    setPhaseBoth('revealing');
+    engineRef.current?.play({
+      from: setupStart,
+      cutAt: null,
+      duration: setupDuration + revealDuration,
+      onDone: onRevealFinished,
+    });
+  }, [engineRef, setupStart, setupDuration, revealDuration, onRevealFinished]);
 
-    const totalDuration = Math.max(3.8, pauseTime - effectiveStartTime) + Math.max(2.5, resumeDuration);
-    elapsedPlayTimeRef.current = 0;
-    setProgress(0);
+  const pause = useCallback(() => engineRef.current?.pause(), [engineRef]);
 
-    try {
-      disableCaptions(playerRef.current);
-      if (isMuted) {
-        playerRef.current.mute?.();
-      } else {
-        playerRef.current.unMute?.();
-        playerRef.current.setVolume?.(volume);
-      }
-      playerRef.current.seekTo(effectiveStartTime, true);
-      playerRef.current.playVideo();
+  const resume = useCallback(() => {
+    const engine = engineRef.current;
+    if (!engine) return;
+    if (!engine.resumeSegment() && phaseRef.current === 'revealing') engine.resumeFree();
+  }, [engineRef]);
 
-      startMonitoring('reveal', totalDuration, () => {
-        onRevealFinished();
-      });
-    } catch {}
-  }, [effectiveStartTime, pauseTime, resumeDuration, volume, isMuted, disableCaptions, startMonitoring, onRevealFinished]);
-
-  // Pause whatever is currently playing
-  const pause = useCallback(() => {
-    clearTimers();
-    if (playerRef.current && typeof playerRef.current.pauseVideo === 'function') {
-      try {
-        playerRef.current.pauseVideo();
-      } catch {}
-    }
-    setIsPlaying(false);
-    showCenterIconFeedback('pause');
-  }, []);
-
-  // Universal Toggle Play / Pause / Replay on click or Space
   const togglePlay = useCallback(() => {
-    if (phase === 'standby') {
-      playSetup();
-      return;
-    }
-
-    if (phase === 'setup_playing') {
-      pause();
-      return;
-    }
-
-    if (phase === 'setup_paused') {
-      // Replay the setup clip
-      replaySetup();
-      return;
-    }
-
-    if (phase === 'revealing' || phase === 'reveal_finished') {
-      if (isPlaying) {
-        pause();
-      } else {
-        // Resume continuous playback
-        if (playerRef.current) {
-          try {
-            const currentSec = playerRef.current.getCurrentTime?.() ?? 0;
-            const dur = playerRef.current.getDuration?.() ?? 0;
-            if (dur > 0 && currentSec >= dur - 0.5) {
-              playerRef.current.seekTo(pauseTime, true);
-            }
-            playerRef.current.playVideo();
-            setIsPlaying(true);
-            showCenterIconFeedback('play');
-          } catch {}
-        }
-      }
-      return;
-    }
-  }, [phase, isPlaying, playSetup, pause, replaySetup, pauseTime]);
+    const p = phaseRef.current;
+    if (p === 'standby' || p === 'setup_paused') return playSetup();
+    if (playing) return pause();
+    resume();
+  }, [playing, playSetup, pause, resume]);
 
   useImperativeHandle(ref, () => ({
     playSetup,
-    replaySetup,
+    replaySetup: playSetup,
     replayFullScene,
     revealPunchline,
     pause,
-    resume: resumeSetup,
+    resume,
     togglePlay,
-    isPlaying,
+    isPlaying: playing,
   }));
 
-  // Initialize YouTube Player
-  useEffect(() => {
-    let isCancelled = false;
-    clearTimers();
-    userHasClickedPlayRef.current = false;
-    setIsPlaying(false);
-    setHasStarted(false);
-    setPhase('standby');
-    setProgress(0);
+  let status: React.ReactNode;
+  if (error) {
+    status = (
+      <span className="flex items-center gap-2 text-red-300">
+        <AlertTriangle className="w-3.5 h-3.5" /> {ERROR_TEXT[error.kind]}
+      </span>
+    );
+  } else if (!ready) {
+    status = <span className="text-zinc-500">Chargement de la réplique…</span>;
+  } else if (phase === 'standby') {
+    status = <span className="text-zinc-400">Prêt : lance l&apos;extrait</span>;
+  } else if (phase === 'setup_playing') {
+    status = playing ? (
+      <span className="flex items-center gap-2 text-amber-300">
+        <span className="w-2 h-2 rounded-full bg-amber-400" /> Écoute l&apos;amorce…
+      </span>
+    ) : (
+      <span className="text-zinc-400">Amorce en pause</span>
+    );
+  } else if (phase === 'setup_paused') {
+    status = (
+      <span className="flex items-center gap-2 text-orange-400">
+        <span className="w-2 h-2 rounded-full bg-orange-500" /> Choisis la suite ci-dessous !
+      </span>
+    );
+  } else {
+    status = playing ? (
+      <span className="flex items-center gap-2 text-emerald-300">
+        <Sparkles className="w-3.5 h-3.5" /> Suite de la scène
+      </span>
+    ) : (
+      <span className="text-zinc-400">Extrait en pause</span>
+    );
+  }
 
-    const initPlayer = () => {
-      if (!containerRef.current || !window.YT || !window.YT.Player) return;
-
-      // Clean container
-      containerRef.current.innerHTML = '';
-      const iframeDiv = document.createElement('div');
-      iframeDiv.id = `quote-yt-player-${Math.random().toString(36).substring(2, 9)}`;
-      iframeDiv.style.width = '100%';
-      iframeDiv.style.height = '100%';
-      containerRef.current.appendChild(iframeDiv);
-
-      playerRef.current = new window.YT.Player(iframeDiv.id, {
-        width: '100%',
-        height: '100%',
-        videoId,
-        playerVars: {
-          autoplay: 0,
-          controls: 0,
-          disablekb: 1,
-          fs: 0,
-          modestbranding: 1,
-          rel: 0,
-          playsinline: 1,
-          iv_load_policy: 3,
-          cc_load_policy: 0,
-          cc_lang_pref: 'off',
-          origin: typeof window !== 'undefined' ? window.location.origin : undefined,
-        },
-        events: {
-          onReady: (event: { target: YTPlayerInstance }) => {
-            if (isCancelled) return;
-            setIsReady(true);
-            disableCaptions(event.target);
-
-            try {
-              if (isMutedRef.current) {
-                event.target.mute();
-              } else {
-                event.target.unMute();
-                event.target.setVolume(volumeRef.current);
-              }
-
-              // Pre-cue video parked at effectiveStartTime. Strictly prevent autoplay.
-              if (typeof event.target.cueVideoById === 'function') {
-                event.target.cueVideoById({
-                  videoId,
-                  startSeconds: effectiveStartTime,
-                });
-              } else {
-                event.target.seekTo(effectiveStartTime, false);
-                event.target.pauseVideo();
-              }
-            } catch {}
-
-            onReadyRef.current?.();
-          },
-          onStateChange: (event: YTPlayerEvent) => {
-            if (isCancelled) return;
-
-            // IRONCLAD AUTOPLAY PROTECTION:
-            // If YouTube attempts to play before the user explicitly clicked play,
-            // intercept immediately, force-pause and rewind to effectiveStartTime.
-            if (event.data === window.YT?.PlayerState?.PLAYING) {
-              if (!userHasClickedPlayRef.current) {
-                try {
-                  event.target.pauseVideo();
-                  event.target.seekTo(effectiveStartTime, false);
-                } catch {}
-                setIsPlaying(false);
-                return;
-              }
-              setIsPlaying(true);
-              disableCaptions(event.target);
-            } else if (
-              event.data === window.YT?.PlayerState?.PAUSED ||
-              event.data === window.YT?.PlayerState?.ENDED
-            ) {
-              setIsPlaying(false);
-            }
-          },
-        },
-      });
-    };
-
-    if (window.YT && window.YT.Player) {
-      initPlayer();
-    } else {
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag?.parentNode?.insertBefore(tag, firstScriptTag);
-
-      const prevOnReady = window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady = () => {
-        prevOnReady?.();
-        if (!isCancelled) initPlayer();
-      };
-    }
-
-    return () => {
-      isCancelled = true;
-      clearTimers();
-      if (iconTimerRef.current) clearTimeout(iconTimerRef.current);
-      if (playerRef.current && typeof playerRef.current.destroy === 'function') {
-        try {
-          playerRef.current.destroy();
-        } catch {}
-      }
-    };
-  }, [videoId, effectiveStartTime, disableCaptions]);
+  const mainLabel =
+    phase === 'standby' ? 'Lancer l’extrait' : phase === 'setup_paused' ? 'Réécouter' : playing ? 'Pause' : 'Reprendre';
+  const MainIcon = phase === 'setup_paused' ? RotateCcw : playing ? Pause : Play;
 
   return (
-    <div className="relative w-full aspect-video rounded-2xl sm:rounded-3xl overflow-hidden bg-black border border-zinc-800 shadow-2xl select-none group">
-      {/* 
-        Responsive 16:9 YouTube Container:
-        Forces the generated YouTube iframe to fill 100% width and 100% height,
-        framing the video edge-to-edge with zero distortion or off-center shift.
-      */}
-      <div
-        ref={containerRef}
-        className="w-full h-full absolute inset-0 [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:absolute [&>iframe]:inset-0 [&>iframe]:border-0 pointer-events-none"
-      />
-
-      {/* 
-        Transparent Clickable Overlay covering the entire video:
-        Captures all user clicks to toggle play/pause or replay cleanly.
-      */}
-      <div
-        onClick={togglePlay}
-        className="absolute inset-0 z-10 cursor-pointer"
-        title={isPlaying ? 'Mettre en pause [Espace]' : 'Lire / Rejouer [Espace]'}
-      />
-
-      {/* Sleek Standby Screen before user launches the first extract */}
-      {!hasStarted && isReady && (
+    <div className="flex flex-col gap-2" data-testid="quote-player" data-phase={phase} data-cut-at={pauseTime}>
+      {/* Lecteur YouTube : visible en permanence, rien par-dessus. */}
+      <div className="relative w-full aspect-video rounded-2xl sm:rounded-3xl overflow-hidden bg-black border border-zinc-800 shadow-2xl">
         <div
-          onClick={playSetup}
-          className="absolute inset-0 bg-zinc-950/85 backdrop-blur-md flex flex-col items-center justify-center gap-3 z-20 cursor-pointer transition-colors hover:bg-zinc-950/75 group"
-        >
-          <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-orange-600 via-orange-500 to-amber-400 flex items-center justify-center text-zinc-950 shadow-xl shadow-orange-950/60 group-hover:scale-110 transition-transform">
-            <Play className="w-8 h-8 fill-zinc-950 ml-1" />
-          </div>
-          <span className="text-sm font-bold text-white group-hover:text-orange-400 transition-colors">
-            Lancer l&apos;extrait
-          </span>
-          <span className="text-xs text-zinc-400 font-mono">
-            Cliquer ici ou appuyer sur [Espace]
-          </span>
-        </div>
-      )}
-
-      {/* Floating Status Badge (Top Left) */}
-      <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-zinc-950/85 border border-zinc-800 backdrop-blur-md text-[11px] font-bold text-zinc-300 flex items-center gap-2 z-20 pointer-events-none">
-        {phase === 'setup_playing' && (
-          <>
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <span className="text-amber-300 font-medium">Écoute l&apos;amorce...</span>
-          </>
-        )}
-        {phase === 'setup_paused' && (
-          <>
-            <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping" />
-            <span className="text-orange-400">Choisis la suite ci-dessous !</span>
-          </>
-        )}
-        {(phase === 'revealing' || phase === 'reveal_finished') && (
-          <>
-            {isPlaying ? (
-              <>
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                <span className="text-emerald-300 font-medium">Extrait en cours de lecture...</span>
-              </>
-            ) : (
-              <>
-                <Pause className="w-3 h-3 text-zinc-400" />
-                <span className="text-zinc-400 font-medium">Extrait en pause</span>
-              </>
-            )}
-          </>
-        )}
+          ref={hostRef}
+          className="absolute inset-0 [&>iframe]:absolute [&>iframe]:inset-0 [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
+        />
       </div>
 
-      {/* Subtle Hover Replay Hint when paused */}
-      {hasStarted && !isPlaying && phase === 'setup_paused' && (
-        <div className="absolute bottom-3 right-3 px-3 py-1 rounded-xl bg-zinc-950/80 border border-zinc-800 text-zinc-300 text-[11px] font-semibold flex items-center gap-1.5 backdrop-blur-md z-20 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity">
-          <RotateCcw className="w-3 h-3 text-orange-400" />
-          <span>Cliquer ou [Espace] pour réécouter</span>
-        </div>
-      )}
-      {hasStarted && !isPlaying && (phase === 'revealing' || phase === 'reveal_finished') && (
-        <div className="absolute bottom-3 right-3 px-3 py-1 rounded-xl bg-zinc-950/80 border border-zinc-800 text-zinc-300 text-[11px] font-semibold flex items-center gap-1.5 backdrop-blur-md z-20 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity">
-          <Play className="w-3 h-3 text-emerald-400 fill-emerald-400" />
-          <span>Cliquer ou [Espace] pour reprendre</span>
-        </div>
-      )}
-
-      {/* Center Tactile Icon Pop Feedback on Play/Pause/Replay */}
-      {centerIcon && (
-        <div className="absolute inset-0 flex items-center justify-center z-25 pointer-events-none animate-in fade-in zoom-in-75 duration-200">
-          <div className="w-14 h-14 rounded-full bg-zinc-950/80 backdrop-blur-md border border-white/15 flex items-center justify-center text-white shadow-2xl">
-            {centerIcon === 'play' && <Play className="w-7 h-7 fill-white ml-0.5" />}
-            {centerIcon === 'pause' && <Pause className="w-7 h-7 fill-white" />}
-            {centerIcon === 'replay' && <RotateCcw className="w-7 h-7 text-orange-400" />}
+      {/* Commandes et état, sous le lecteur. */}
+      <div className="flex items-center gap-3 px-1">
+        <button
+          type="button"
+          onClick={togglePlay}
+          disabled={!ready || !!error}
+          aria-label={mainLabel}
+          className="shrink-0 px-3 py-1.5 rounded-xl bg-gradient-to-tr from-orange-600 to-amber-400 text-zinc-950 text-xs font-bold flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+        >
+          <MainIcon className="w-3.5 h-3.5" />
+          {mainLabel}
+        </button>
+        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+          <div className="text-[11px] font-semibold truncate" aria-live="polite">
+            {status}
+          </div>
+          <div className="h-1 rounded-full bg-zinc-800 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400"
+              style={{ width: `${Math.round(progress * 100)}%` }}
+            />
           </div>
         </div>
-      )}
-
-      {/* Discrete Bottom Progress Bar during 3s extract or reveal */}
-      {hasStarted && (
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-900/60 z-20 overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400 transition-all duration-75 ease-linear"
-            style={{ width: `${Math.round(progress * 100)}%` }}
-          />
-        </div>
-      )}
-
-      {/* Loading state indicator before player is ready */}
-      {!isReady && (
-        <div className="absolute inset-0 bg-zinc-950 flex flex-col items-center justify-center gap-2 z-30">
-          <div className="w-8 h-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
-          <span className="text-[11px] text-zinc-500 font-medium">Chargement de la réplique...</span>
-        </div>
-      )}
+      </div>
     </div>
   );
 });

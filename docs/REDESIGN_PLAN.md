@@ -274,7 +274,7 @@ Bobine du jour (graine par date) · statistiques locales · ticket de partage en
 ---
 
 ## Prochaine action
-Étape 2 partielle : moteur de lecture `src/features/player` branché sur **Répliques uniquement** (option A, coupure à `pauseTime`), avec e2e Playwright et faux YT. Ensuite, étape 3 (maquette BOBINE sur `/labo/bobine`), puis arrêt pour validation visuelle. Le Blindtest garde son lecteur actuel tant que la décision Blindtest/Battle n'est pas prise. Étapes 4 et 6 bloquées, et étape 5 tant que BOBINE n'est pas validée.
+**Arrêt : validation visuelle de BOBINE** (`/labo/bobine?ecran=primitives|repliques|battle|etats|blindtest`). Restent aussi à confirmer la coupure à `pauseTime` (sans +0,12 s) et à faire les mesures réelles sur navigateurs. Le Blindtest garde son lecteur actuel tant que la décision Blindtest/Battle n'est pas prise. Étapes 4 et 6 bloquées, et étape 5 tant que BOBINE n'est pas validée.
 
 ## Journal d'exécution
 - **2026-11-13 — Étape 1b faite.**
@@ -295,6 +295,35 @@ Bobine du jour (graine par date) · statistiques locales · ticket de partage en
     - captures avant/après identiques pour Solo et Battle en 1440 et 390 ;
     - sur Répliques, seule la sélection aléatoire des questions change, la mise en page est identique.
   - Reprise : étape 2 partielle.
+- **2026-11-13 — Étape 2 partielle faite (Répliques uniquement).**
+  - Nouveau moteur `src/features/player/engine.ts`, sans React, avec son hook `usePlayer.ts` :
+    - un seul chargement de l'API YouTube ;
+    - un lecteur réutilisé d'une question à l'autre (`cueVideoById`) ;
+    - coupure sur le temps vidéo, sans `endSeconds` ;
+    - rechargement du lecteur après un passage à l'état « terminé » ;
+    - erreurs 2, 5, 100, 101, 150 et 153 classées.
+  - `QuotePlayer` passe en option A :
+    - le lecteur est visible et rien n'est superposé ;
+    - plus de `pointer-events: none` ;
+    - les commandes et l'état sont affichés sous le lecteur ;
+    - un clic dans le lecteur pendant l'attente rejoue l'amorce au lieu de dévoiler la suite.
+  - **Changement de comportement : la coupure se fait à `pauseTime`, sans les +0,12 s d'avant.** Point à confirmer par l'utilisateur.
+  - Tests e2e avec un faux YouTube (`npm run e2e`, 7 scénarios, hors CI car ils demandent un navigateur).
+  - Le Blindtest garde son lecteur actuel.
+  - Reprise : mesures réelles sur navigateurs (Chrome, Safari Mac et iOS, Chrome Android) à faire par l'utilisateur sur la préversion. Ensuite, étape 3.
+- **2026-11-13 — Étape 3 faite (maquette BOBINE, en attente de validation).**
+  - Route `/labo/bobine`, non indexée (noindex et `robots.ts`) et non liée depuis le site.
+  - Tokens dans `src/styles/tokens.css`, limités à `.bobine`. Polices via `next/font` : Archivo, Instrument Serif et JetBrains Mono.
+  - Cinq écrans : primitives, Répliques (avec le vrai lecteur, en option A), lobby et récapitulatif Battle (données simulées), états (chargement, erreur, hors ligne) et Blindtest (« en attente de décision »).
+  - La pellicule reprend les paliers réels du jeu (`ATTEMPT_DURATIONS`). Aucune règle n'est ajoutée.
+  - Captures prises en 1440, 390 et 360 px, sans défilement horizontal de la page.
+  - Défauts connus :
+    - les onglets défilent horizontalement à 360 et 390 px ;
+    - la zone d'action mobile n'est pas collante ;
+    - le grain assombrit le bas des captures pleine page ;
+    - le bouton principal désactivé est sous le contraste AA ;
+    - pas de View Transitions.
+  - Reprise : validation visuelle par l'utilisateur, puis étape 5. Les étapes 4 et 6 restent bloquées par la décision Blindtest/Battle.
 
 ---
 

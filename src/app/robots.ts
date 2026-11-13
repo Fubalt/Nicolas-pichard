@@ -5,6 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
+      disallow: '/labo/',
     },
     sitemap: 'https://nicolas-pichard.vercel.app/sitemap.xml',
   };

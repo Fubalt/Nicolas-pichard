@@ -259,7 +259,6 @@ export function QuoteGameView({
 
       {/* Video Player */}
       <QuotePlayer
-        key={`quote-${currentQuestion.id}`}
         ref={playerRef}
         videoId={currentQuestion.videoId}
         startTime={currentQuestion.startTime}

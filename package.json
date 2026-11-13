@@ -10,7 +10,8 @@
     "fetch-videos": "node scripts/fetch-videos.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "validate-data": "node scripts/validate-data.mjs"
+    "validate-data": "node scripts/validate-data.mjs",
+    "e2e": "node tests/e2e/repliques.e2e.mjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
