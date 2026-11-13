@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "validate-data": "node scripts/validate-data.mjs",
-    "e2e": "node tests/e2e/repliques.e2e.mjs"
+    "e2e": "node tests/e2e/repliques.e2e.mjs && node tests/e2e/repliques-v2.e2e.mjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
