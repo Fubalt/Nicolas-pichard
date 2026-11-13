@@ -203,3 +203,30 @@ Les essais ont été faits avec la sonde `public/labo/youtube-probe.html` (prév
 - À trancher par les essais d'écoute de la sonde v2 (décalage par pas de 25 ms).
 - Le jeu actuel coupe à la borne + 0,12 s (`QuotePlayer.tsx:181`), donc probablement après le début de la chute.
 - **Aucune borne n'est modifiée dans les données tant que le calibrage n'est pas validé.**
+
+### 6.5 Premier résultat d'écoute (2026-11-13) — une seule réplique
+
+Réplique « Les geeks » (`geeks_super_pouvoirs_voler`, borne des données 111,900 s), sortie audio non précisée :
+
+| Appareil | Décalage où le « Tu » n'est plus entendu | Fin de « Oui… » à ce décalage |
+|---|---|---|
+| Mac | 0 ms | Entière |
+| iPhone (Safari iOS 18.7) | −250 ms | Entière |
+
+- Les positions de pause rapportées par YouTube sont les mêmes sur les deux appareils (+9 à +23 ms après la borne). L'écart d'environ 250 ms vient donc de ce qui est entendu sur iOS, pas de la position de pause.
+- **Un seul résultat, sur une seule réplique.** Il ne suffit pas à fixer une marge.
+- À vérifier :
+  - l'iPhone sur le haut-parleur, à 0 et à −250 ms ;
+  - le Mac à −250 ms (« Oui… » reste-t-il entier ?) ;
+  - quelques autres répliques sur iPhone.
+- **Aucune borne n'est modifiée dans les données.** Il reste à **vérifier si une anticipation par plateforme est nécessaire**.
+
+### 6.6 Relance depuis l'état « terminé » (scénario D) — confirmé sur les trois navigateurs
+
+| Relance depuis « terminé » (après `endSeconds`) | Chrome Mac | Safari Mac | Safari iPhone |
+|---|---|---|---|
+| `playVideo()` seul | Redémarre à 0 s (2/2) | Redémarre à 0 s (3/3) | Redémarre à 0 s (1/1) |
+| Repositionner puis `playVideo()` | Repart au début demandé, puis s'arrête de nouveau à l'ancienne borne `endSeconds` (1/1) | Non testé | Idem (2/2) |
+
+- Quand on relance un chargement alors que le lecteur est déjà « terminé », YouTube émet aussi un état « terminé » transitoire à 0 s, avant que la lecture ne démarre. La sonde le conserve dans le journal, mais ne le valide pas comme fin attendue. Elle exige que la lecture ait démarré et que la position soit proche de la borne visée.
+- **Conséquence pour le moteur :** aucun `endSeconds`. Un lecteur arrivé à « terminé » doit être **rechargé** : une simple relance ne suffit pas.

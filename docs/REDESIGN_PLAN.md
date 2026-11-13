@@ -286,9 +286,9 @@ Les détails et mesures sont dans [`docs/YOUTUBE_CONSTRAINTS.md` §6](./YOUTUBE_
 - **Coupure sur le temps vidéo** (`getCurrentTime` à chaque trame puis `pauseVideo`). Abandon de la coupure sur l'horloge.
 - **Pas d'`endSeconds`** : il fait passer le lecteur à l'état « terminé » (titre et suggestions affichés) et sa borne survit au `seekTo()`.
 - **Lecteur unique réutilisé** (latence de 275 à 300 ms, contre 340 ms à 1 s pour un lecteur recréé).
-- **Ne jamais laisser le lecteur dans l'état « terminé »**. Toujours repositionner avant de relancer. Un « terminé » inattendu est traité comme une fin prématurée.
+- **Ne jamais laisser le lecteur dans l'état « terminé »**. S'il y arrive quand même, **le recharger** : depuis « terminé », `playVideo()` repart à 0 s, et un repositionnement ne lève pas l'ancienne borne `endSeconds` (confirmé sur Chrome, Safari Mac et iPhone). Un « terminé » inattendu est traité comme une fin prématurée.
 - **Palier 1 à redéfinir** : un extrait de 0,1 s joue en réalité environ 0,19 s sur un lecteur réutilisé. Les durées annoncées devront correspondre aux durées mesurées.
-- **Marge de sécurité de coupure des répliques** à fixer d'après le calibrage d'écoute en cours (sonde v2, section C). Les bornes de `classic-quotes.json` ne seront corrigées qu'après validation.
+- **Coupure des répliques : pas de correction des données pour l'instant. Vérifier si une anticipation par plateforme est nécessaire.** Un seul résultat d'écoute à ce stade, sur une seule réplique : 0 ms sur Mac, −250 ms sur l'iPhone de l'utilisateur, avec des positions de pause identiques. Essais complémentaires en cours (haut-parleur de l'iPhone, Mac à −250 ms, autres répliques). Les bornes de `classic-quotes.json` ne seront corrigées qu'après validation.
 
 ### Mode Répliques
 - Option A d'affichage (lecteur visible en permanence, sans surcouche) : conforme, et sans effet sur le jeu puisque le titre y est affiché.

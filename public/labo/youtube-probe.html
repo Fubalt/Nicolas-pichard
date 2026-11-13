@@ -54,6 +54,10 @@
   .quote b { color:var(--fg); }
   .ok { color:var(--ok); } .bad { color:var(--bad); }
   details summary { cursor:pointer; font-size:14px; color:var(--mute); }
+  #answer-card { border:2px solid var(--accent); border-radius:8px; padding:12px; margin:10px 0; }
+  #answer-card .qline { margin-top:8px; font-size:15px; font-weight:600; }
+  button.ac { min-width:110px; }
+  button.ac[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:#fff; }
 </style>
 </head>
 <body>
@@ -99,6 +103,10 @@
     </div>
     <div class="quote" id="quote-text"></div>
     <div class="row" style="margin-top:12px">
+      <label for="audio">Sortie audio</label>
+      <select id="audio"><option value="">—</option><option>Haut-parleur</option><option>Écouteurs filaires</option><option>Bluetooth</option></select>
+    </div>
+    <div class="row">
       <label for="offset">Décalage de coupure</label>
       <input id="offset" type="range" min="-300" max="100" step="25" value="0" aria-describedby="offset-out">
       <span id="offset-out" class="big">0 ms</span>
@@ -113,11 +121,18 @@
       <button class="primary" id="q-setup">Rejouer l'amorce</button>
       <button id="q-reveal">Révéler la suite</button>
     </div>
+    <div id="answer-card" hidden aria-live="polite">
+      <div class="big" id="ac-title">Essai —</div>
+      <div class="qline">Début de la chute entendu ?</div>
+      <div class="row"><button class="ac" data-field="heard" data-val="Oui" aria-pressed="false">Oui</button><button class="ac" data-field="heard" data-val="Non" aria-pressed="false">Non</button></div>
+      <div class="qline">Fin de l'amorce entière ?</div>
+      <div class="row"><button class="ac" data-field="intact" data-val="Oui" aria-pressed="false">Oui</button><button class="ac" data-field="intact" data-val="Non" aria-pressed="false">Non</button></div>
+    </div>
     <h3>Essais de réplique</h3>
     <div class="scroll">
       <table>
-        <thead><tr><th>#</th><th>Réplique</th><th>Décalage</th><th>Borne visée</th><th>Pos. demande pause</th><th>Pos. événement pause</th><th>Dépassement</th><th>Début de la chute entendu ?</th><th>Fin de l'amorce entière ?</th><th>Note</th></tr></thead>
-        <tbody id="trials"><tr><td colspan="10" class="meta">Aucun essai pour l'instant.</td></tr></tbody>
+        <thead><tr><th>#</th><th>Réplique</th><th>Décalage</th><th>Borne visée</th><th>Pos. demande pause</th><th>Pos. événement pause</th><th>Dépassement</th><th>Sortie audio</th><th>Début de la chute entendu ?</th><th>Fin de l'amorce entière ?</th><th>Note</th></tr></thead>
+        <tbody id="trials"><tr><td colspan="11" class="meta">Aucun essai pour l'instant.</td></tr></tbody>
       </table>
     </div>
     <p class="meta">Dépassement = position à l'événement « pause » − borne visée.</p>
@@ -400,9 +415,9 @@ function finish(note, opts = {}) {
       n: trials.length + 1, quoteId: r.quote.id, title: r.quote.videoTitle, punchline: r.quote.correctPunchline,
       offset: r.offset, target: r.target, ctReq: r.ctReq, ctPauseEvt: r.ctPauseEvt,
       overshootMs: r.ctPauseEvt != null ? Math.round((r.ctPauseEvt - r.target) * 1000) : null,
-      heard: '', intact: '', note: (r.blocked ? 'lecture bloquée · ' : '') + (note || ''),
+      audio: $('#audio').value, heard: '', intact: '', note: (r.blocked ? 'lecture bloquée · ' : '') + (note || ''),
     };
-    trials.push(t); renderTrials();
+    trials.push(t); renderTrials(); showCard(t);
     log(`Essai réplique #${t.n} (${t.quoteId}, décalage ${t.offset} ms) : borne ${fmt(t.target)} s, demande de pause à ${fmt(t.ctReq)} s, événement pause à ${fmt(t.ctPauseEvt)} s, dépassement ${t.overshootMs ?? '—'} ms`);
   } else {
     const row = {
@@ -429,12 +444,22 @@ function obsSelect(t, field) {
     ['', 'Oui', 'Non'].map((o) => `<option value="${o}"${o === v ? ' selected' : ''}>${o || '—'}</option>`).join('') + '</select>';
 }
 function renderTrials() {
-  $('#trials').innerHTML = trials.map((t) => `<tr><td>${t.n}</td><td>${esc(t.title)} · ${esc(t.quoteId)}</td><td>${t.offset > 0 ? '+' : ''}${t.offset} ms</td><td>${fmt(t.target)} s</td><td>${fmt(t.ctReq)} s</td><td>${fmt(t.ctPauseEvt)} s</td><td>${t.overshootMs ?? '—'} ms</td><td>${obsSelect(t, 'heard')}</td><td>${obsSelect(t, 'intact')}</td><td>${esc(t.note)}</td></tr>`).join('');
+  $('#trials').innerHTML = trials.map((t) => `<tr><td>${t.n}</td><td>${esc(t.title)} · ${esc(t.quoteId)}</td><td>${t.offset > 0 ? '+' : ''}${t.offset} ms</td><td>${fmt(t.target)} s</td><td>${fmt(t.ctReq)} s</td><td>${fmt(t.ctPauseEvt)} s</td><td>${t.overshootMs ?? '—'} ms</td><td>${esc(t.audio || NR)}</td><td>${obsSelect(t, 'heard')}</td><td>${obsSelect(t, 'intact')}</td><td>${esc(t.note)}</td></tr>`).join('');
 }
 $('#trials').addEventListener('change', (e) => {
   const el = e.target; if (!el.dataset || !el.dataset.trial) return;
-  const t = trials[+el.dataset.trial - 1]; if (t) { t[el.dataset.field] = el.value; log(`Essai #${t.n} : ${el.dataset.field === 'heard' ? 'chute entendue' : 'amorce entière'} = ${el.value || NR}`); }
+  const t = trials[+el.dataset.trial - 1]; if (t) { t[el.dataset.field] = el.value; updateCard(); log(`Essai #${t.n} : ${el.dataset.field === 'heard' ? 'chute entendue' : 'amorce entière'} = ${el.value || NR}`); }
 });
+
+/* ---------- Carte de réponse (dernier essai de réplique) ---------- */
+let cardTrial = null;
+function showCard(t) { cardTrial = t; $('#answer-card').hidden = false; $('#ac-title').textContent = `Essai #${t.n} · décalage ${t.offset > 0 ? '+' : ''}${t.offset} ms · borne ${fmt(t.target)} s`; updateCard(); }
+function updateCard() { if (!cardTrial) return; document.querySelectorAll('button.ac').forEach((b) => b.setAttribute('aria-pressed', String(cardTrial[b.dataset.field] === b.dataset.val))); }
+document.querySelectorAll('button.ac').forEach((b) => b.addEventListener('click', () => {
+  if (!cardTrial) return;
+  cardTrial[b.dataset.field] = b.dataset.val; renderTrials(); updateCard();
+  log(`Essai #${cardTrial.n} : ${b.dataset.field === 'heard' ? 'chute entendue' : 'amorce entière'} = ${b.dataset.val}`);
+}));
 
 /* ---------- Boutons A, B, C ---------- */
 const startValue = () => +$('#start').value || 0;
@@ -473,7 +498,7 @@ $('#end-1').addEventListener('click', () => {
   if (notReady()) return;
   cancelRun(); pauseNormal = false;
   const s = startValue();
-  endedScn = { phase: 'loading', start: s };
+  endedScn = { phase: 'loading', start: s, target: s + 1, playing: false };
   applySound();
   player.loadVideoById({ videoId, startSeconds: s, endSeconds: s + 1 });
   log(`Scénario terminé : loadVideoById avec endSeconds ${fmt(s + 1)} s`);
@@ -482,9 +507,9 @@ $('#end-1').addEventListener('click', () => {
 function relaunch(variant) {
   if (notReady()) return;
   const st = safeState();
-  if (st !== 0) { log(`Relance ignorée : le lecteur n'est pas « terminé » (état ${STATE[st] ?? st}). Fais d'abord l'étape 1 de la section D.`); return; }
-  const s = endedScn ? endedScn.start : startValue();
-  if (endedScn) clearTimeout(endedScn.timer);
+  if (st !== 0 || !endedScn || endedScn.phase !== 'ended') { log(`Relance ignorée : « terminé » non validé (état ${STATE[st] ?? st}). Fais d'abord l'étape 1 de la section D.`); return; }
+  const s = endedScn.start;
+  clearTimeout(endedScn.timer);
   endedScn = { phase: 'relaunch', start: s, variant, posBefore: safeTime(), posAtPlay: null, posAfter: null, endedAgain: null };
   applySound();
   if (variant === 'seek') player.seekTo(s, true);
@@ -496,7 +521,14 @@ $('#end-play').addEventListener('click', () => relaunch('play'));
 $('#end-seek').addEventListener('click', () => relaunch('seek'));
 function onEndedState(s) {
   const e = endedScn;
-  if (e.phase === 'loading' && s === 0) { clearTimeout(e.timer); e.phase = 'ended'; log(`Scénario terminé : état « terminé » atteint à ${fmt(safeTime())} s`); return; }
+  if (e.phase === 'loading' && s === 1) { e.playing = true; return; }
+  if (e.phase === 'loading' && s === 0) {
+    const pos = safeTime();
+    // La fin n'est validée que si la lecture a démarré et que la position est proche de la borne visée.
+    if (e.playing && Math.abs(pos - e.target) < 0.25) { clearTimeout(e.timer); e.phase = 'ended'; log(`Scénario terminé : état « terminé » validé à ${fmt(pos)} s (borne ${fmt(e.target)} s)`); }
+    else log(`Scénario terminé : « terminé » non validé (${e.playing ? 'lecture démarrée' : 'lecture pas encore démarrée'}, position ${fmt(pos)} s, borne ${fmt(e.target)} s)`);
+    return;
+  }
   if (e.phase !== 'relaunch') return;
   if (s === 1 && e.posAtPlay === null) { e.posAtPlay = safeTime(); clearTimeout(e.timer); e.timer = setTimeout(() => endedFinish(), 1500); }
   if (s === 0 && e.posAtPlay !== null && e.endedAgain === null) { e.endedAgain = safeTime(); clearTimeout(e.timer); endedFinish(); }
@@ -525,7 +557,7 @@ function endedFinish(extra) {
 function buildReport() {
   const obs = QUESTIONS.map(([k, label]) => `- ${label} → ${(document.querySelector(`input[name="${k}"]:checked`) || {}).value || NR}`).join('\n');
   const r = $('#player-host').getBoundingClientRect();
-  const trialRows = trials.map((t) => `| ${t.n} | ${t.quoteId} | ${t.title} | ${t.offset} | ${fmt(t.target)} | ${fmt(t.ctReq)} | ${fmt(t.ctPauseEvt)} | ${t.overshootMs ?? '—'} | ${t.heard || NR} | ${t.intact || NR} | ${t.note} |`).join('\n');
+  const trialRows = trials.map((t) => `| ${t.n} | ${t.quoteId} | ${t.title} | ${t.offset} | ${fmt(t.target)} | ${fmt(t.ctReq)} | ${fmt(t.ctPauseEvt)} | ${t.overshootMs ?? '—'} | ${t.audio || NR} | ${t.heard || NR} | ${t.intact || NR} | ${t.note} |`).join('\n');
   const rows = results.map((x) => `| ${x.n} | ${x.label} | ${x.requested} | ${x.latencyMs ?? '—'} | ${fmt(x.playLag)} | ${fmt(x.finMinusStart)} | ${fmt(x.overshoot)} | ${x.note} |`).join('\n');
   const endRows = endedRows.map((x) => `| ${x.n} | ${x.variant} | ${fmt(x.start)} | ${fmt(x.posBefore)} | ${fmt(x.posAtPlay)} | ${fmt(x.posAfter)} | ${x.constat} |`).join('\n');
   return [
@@ -535,9 +567,10 @@ function buildReport() {
     `Navigateur : ${navigator.userAgent}`,
     `Écran : ${screen.width}×${screen.height} @${devicePixelRatio}x · lecteur ${Math.round(r.width)}×${Math.round(r.height)} px`,
     `Paramètres : ${JSON.stringify(playerVars())} · muet au départ : ${$('#muted').checked}`,
+    `Sortie audio (sélection actuelle) : ${$('#audio').value || NR}`,
     '', '## C. Essais de réplique',
-    '| # | Réplique (id) | Vidéo | Décalage (ms) | Borne visée (s) | Pos. demande pause (s) | Pos. événement pause (s) | Dépassement (ms) | Début de la chute entendu ? | Fin de l\'amorce entière ? | Note |',
-    '|---|---|---|---|---|---|---|---|---|---|---|', trialRows || '| — |',
+    '| # | Réplique (id) | Vidéo | Décalage (ms) | Borne visée (s) | Pos. demande pause (s) | Pos. événement pause (s) | Dépassement (ms) | Sortie audio | Début de la chute entendu ? | Fin de l\'amorce entière ? | Note |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|', trialRows || '| — |',
     '', '## A et B. Mesures',
     '| # | Méthode | Demandé (s) | Latence (ms) | Retard évén. « lecture » (s) | Fin − début demandé (s) | Dépassement (s) | Note |',
     '|---|---|---|---|---|---|---|---|', rows || '| — |',
